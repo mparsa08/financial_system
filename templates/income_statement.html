@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Income Statement{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header">
+                Income Statement
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'income_statement' %}" class="mb-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="trading_account_select" class="form-label">Select Trading Account:</label>
+                            <select class="form-select" id="trading_account_select" name="trading_account_id" required>
+                                <option value="">-- Select an Account --</option>
+                                {% for account in trading_accounts %}
+                                    <option value="{{ account.id }}" {% if selected_account and selected_account.id == account.id %}selected{% endif %}>{{ account.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Start Date:</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">End Date:</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if report_data %}
+                    <h5 class="mt-4">Report for {{ report_data.trading_account }} ({{ report_data.start_date }} to {{ report_data.end_date }})</h5>
+                    <hr>
+                    
+                    <h6>Revenues:</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Account Name</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for revenue in report_data.breakdown.revenues %}
+                                <tr>
+                                    <td>{{ revenue.account__account_name }}</td>
+                                    <td>{{ revenue.amount|floatformat:2 }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="2">No revenues recorded.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p><strong>Total Revenue: {{ report_data.report.total_revenue|floatformat:2 }}</strong></p>
+
+                    <h6 class="mt-4">Expenses:</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Account Name</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in report_data.breakdown.expenses %}
+                                <tr>
+                                    <td>{{ expense.account__account_name }}</td>
+                                    <td>{{ expense.amount|floatformat:2 }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="2">No expenses recorded.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p><strong>Total Expenses: {{ report_data.report.total_expenses|floatformat:2 }}</strong></p>
+
+                    <h4 class="mt-4">Net Income: {{ report_data.report.net_income|floatformat:2 }}</h4>
+
+                {% else %}
+                    <p>Please select a trading account and date range to generate the Income Statement.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

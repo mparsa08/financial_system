@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Trading Account{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                Create New Trading Account
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Account Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="account_type" class="form-label">Account Type</label>
+                        <select class="form-select" id="account_type" name="account_type" required>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Forex">Forex</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="account_purpose" class="form-label">Account Purpose</label>
+                        <select class="form-select" id="account_purpose" name="account_purpose" required>
+                            <option value="SPOT">Spot Trading</option>
+                            <option value="FUTURES">Futures Trading</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

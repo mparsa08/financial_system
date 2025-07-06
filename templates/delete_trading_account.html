@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Trading Account{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                Confirm Account Deletion
+            </div>
+            <div class="card-body">
+                <p class="card-text">Are you sure you want to delete the trading account: <strong>{{ trading_account.name }}</strong>?</p>
+                <p class="card-text text-danger"><strong>WARNING:</strong> Deleting this account will permanently remove all associated data, including its chart of accounts, journal entries, and trade logs. This action cannot be undone.</p>
+                
+                <form method="post" action="{% url 'delete_trading_account' trading_account.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Account</button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

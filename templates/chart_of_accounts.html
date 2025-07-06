@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Chart of Accounts{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                Chart of Accounts
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'chart_of_accounts' %}" class="mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="trading_account_select" class="form-label">Select Trading Account:</label>
+                            <select class="form-select" id="trading_account_select" name="trading_account_id" onchange="this.form.submit()">
+                                <option value="">-- Select an Account --</option>
+                                {% for account in trading_accounts %}
+                                    <option value="{{ account.id }}" {% if selected_account and selected_account.id == account.id %}selected{% endif %}>{{ account.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </form>
+
+                {% if selected_account %}
+                    <h5 class="mt-4">Chart of Accounts for {{ selected_account.name }}</h5>
+                    {% if chart_of_accounts %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Account Number</th>
+                                    <th>Account Name</th>
+                                    <th>Account Type</th>
+                                    <th>Parent Account</th>
+                                    <th>Is Active</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in chart_of_accounts %}
+                                    <tr>
+                                        <td>{{ account.account_number }}</td>
+                                        <td>{{ account.account_name }}</td>
+                                        <td>{{ account.account_type }}</td>
+                                        <td>{{ account.parent_account.account_name|default:"-" }}</td>
+                                        <td>{% if account.is_active %}Yes{% else %}No{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>No chart of accounts found for this trading account.</p>
+                    {% endif %}
+                {% else %}
+                    <p>Please select a trading account to view its chart of accounts.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

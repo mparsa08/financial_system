@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div>
+    <form action="" method="post">
+        {% csrf_token %}
+
+        <h2>{{ title }}</h2>
+
+        <p>شما در حال واریز وجه به حساب(های) زیر هستید:</p>
+        <ul>
+            {% for account in accounts %}
+            <li>{{ account.name }} (متعلق به: {{ account.user.username }})</li>
+            {% endfor %}
+        </ul>
+
+        <hr>
+
+        <p>لطفاً مبلغ و توضیحات واریز را مشخص کنید:</p>
+        
+        {{ form.as_p }}
+
+        {% for obj in accounts %}
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="make_deposit_action">
+        
+        <hr>
+        <div>
+            <button type="submit" name="apply" class="button">اعمال واریز وجه</button>
+            <a href="." class="button">انصراف</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

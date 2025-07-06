@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Trading Account Summary
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Welcome, {{ user.username }}!</h5>
+                <p class="card-text">Here is a summary of your trading accounts:</p>
+                <ul class="list-group list-group-flush">
+                    {% for account in trading_accounts %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ account.name }} ({{ account.get_account_type_display }}) - {{ account.get_account_purpose_display }}
+                            <a href="{% url 'delete_trading_account' account.id %}" class="btn btn-danger btn-sm">Delete</a>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item">No trading accounts found. <a href="{% url 'create_trading_account' %}">Create one now!</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Recent Activity
+            </div>
+            <div class="card-body">
+                <p class="card-text">Your recent transactions will be displayed here.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
