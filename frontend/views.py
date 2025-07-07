@@ -1,10 +1,42 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import TemplateView, View
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, TemplateView, View
 from core.models import TradingAccount, Asset, JournalEntry, ClosedTradesLog, ChartOfAccount
 from core.services import make_deposit, make_withdrawal, execute_spot_buy, execute_spot_sell, create_trading_account, generate_income_statement, record_closed_trade, calculate_unrealized_pnl, transfer_funds_between_accounts
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from datetime import datetime
+
+
+
+
+
+class AddClosedTradeView(CreateView):
+    model = ClosedTradesLog
+    template_name = 'frontend/add_closed_trade.html' # نام تمپلیتی که برای فرم استفاده می‌شود
+    fields = ['asset', 'trade_date', 'net_profit_or_loss', 'commission_fee', 'trading_account']
+    success_url = reverse_lazy('dashboard') # آدرسی که بعد از ثبت موفق به آن هدایت می‌شود (نام URL داشبورد خود را جایگزین کنید)
+
+    def get_form(self, form_class=None):
+        """
+        این متد را بازنویسی می‌کنیم تا گزینه‌های فرم را فیلتر کنیم.
+        """
+        form = super().get_form(form_class)
+        # فقط دارایی‌های از نوع مشتقه را در دراپ‌داون نمایش بده
+        form.fields['asset'].queryset = Asset.objects.filter(asset_type=Asset.DERIVATIVE)
+        # فقط حساب‌های معاملاتی از نوع فیوچرز را نمایش بده
+        form.fields['trading_account'].queryset = TradingAccount.objects.filter(account_purpose=TradingAccount.FUTURES)
+        return form
+    
+    def form_valid(self, form):
+        """
+        این متد پس از ارسال فرم معتبر اجرا می‌شود.
+        ما کاربر لاگین کرده را به عنوان posted_by در سند حسابداری آتی ثبت می‌کنیم.
+        """
+        # این بخش اختیاری است اما برای اتصال خودکار کاربر به لاگ مفید است
+        # اگر در سیگنال خود posted_by را از روی trading_account.user تنظیم کرده‌اید، به این بخش نیازی نیست.
+        # form.instance.posted_by = self.request.user
+        return super().form_valid(form)
 
 class DashboardView(TemplateView):
     template_name = 'index.html'
@@ -267,52 +299,7 @@ class IncomeStatementView(TemplateView):
 
         return context
 
-class AddClosedTradeView(View):
-    def get(self, request):
-        trading_accounts = TradingAccount.objects.filter(user=request.user)
-        derivative_assets = Asset.objects.filter(asset_type=Asset.DERIVATIVE)
-        return render(request, 'add_closed_trade.html', {
-            'trading_accounts': trading_accounts,
-            'derivative_assets': derivative_assets
-        })
 
-    def post(self, request):
-        trading_account_id = request.POST.get('trading_account_id')
-        asset_id = request.POST.get('asset_id')
-        trade_date_str = request.POST.get('trade_date')
-        net_profit_or_loss = request.POST.get('net_profit_or_loss')
-        commission_fee = request.POST.get('commission_fee', 0)
-
-        try:
-            trading_account = TradingAccount.objects.get(id=trading_account_id, user=request.user)
-            asset = Asset.objects.get(id=asset_id)
-            trade_date = datetime.strptime(trade_date_str, '%Y-%m-%d').date()
-
-            record_closed_trade(
-                trading_account=trading_account,
-                asset=asset,
-                trade_date=trade_date,
-                net_profit_or_loss=float(net_profit_or_loss),
-                commission_fee=float(commission_fee),
-                user=request.user
-            )
-            messages.success(request, 'Closed trade recorded successfully!')
-            return redirect('transaction_history')
-        except TradingAccount.DoesNotExist:
-            messages.error(request, 'Trading account not found.')
-        except Asset.DoesNotExist:
-            messages.error(request, 'Asset not found.')
-        except ValueError as e:
-            messages.error(request, f'Error recording trade: {e}')
-        except Exception as e:
-            messages.error(request, f'An unexpected error occurred: {e}')
-        
-        trading_accounts = TradingAccount.objects.filter(user=request.user)
-        derivative_assets = Asset.objects.filter(asset_type=Asset.DERIVATIVE)
-        return render(request, 'add_closed_trade.html', {
-            'trading_accounts': trading_accounts,
-            'derivative_assets': derivative_assets
-        })
 
 class DeleteTradingAccountView(View):
     def get(self, request, pk):
