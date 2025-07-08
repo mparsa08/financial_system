@@ -1,7 +1,8 @@
 
 from django.db import transaction
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from decimal import Decimal
 from core.models import ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, AssetLot, Asset, ClosedTradesLog
 from .models import ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE # وارد کردن ثابت‌ها از مدل‌ها
@@ -494,89 +495,77 @@ def withdraw_spot_asset(trading_account, asset, quantity, price_usd, description
             return entry
         except ChartOfAccount.DoesNotExist:
             raise ValueError(f"Required accounts are not set up for {trading_account.name}.")
-
-def execute_spot_buy(trading_account, asset, quantity, trade_cost, description, user):
+def execute_spot_buy(trading_account, asset, quantity: Decimal, trade_cost: Decimal, description: str, user):
     """
-    Handles the buying of a spot asset.
-    Creates an AssetLot and debits the cash account.
+    منطق خرید یک دارایی اسپات را اجرا می‌کند.
+    این نسخه با ساختار حسابداری نهایی و توابع کمکی هماهنگ شده است.
     """
     with transaction.atomic():
-        if not isinstance(quantity, Decimal) or quantity <= 0:
-            raise ValueError("Quantity must be a positive Decimal.")
-        if not isinstance(trade_cost, Decimal) or trade_cost <= 0:
-            raise ValueError("Trade cost must be a positive Decimal.")
+        # ۱. اعتبارسنجی‌های اولیه و کلیدی
+        
         if asset.asset_type != Asset.SPOT:
-            raise ValueError("Asset must be of type SPOT for this operation.")
+            raise ValueError("دارایی انتخاب شده باید از نوع اسپات باشد.")
+        if quantity <= 0 or trade_cost <= 0:
+            raise ValueError("مقدار و هزینه معامله باید اعداد مثبت باشند.")
+
+        # ۲. بررسی موجودی نقد با استفاده از تابع کمکی
+        current_cash_balance = get_cash_balance(trading_account)
+        if current_cash_balance < trade_cost:
+            raise ValueError(f"موجودی نقد کافی نیست. موجودی: {current_cash_balance}, مورد نیاز: {trade_cost}")
 
         try:
+            # ۳. پیدا کردن حساب‌های مورد نیاز از سرفصل‌ها
+            # ما از .get() استفاده می‌کنیم چون مطمئن هستیم این حساب‌ها باید از قبل وجود داشته باشند
             cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            # Check for sufficient funds
-            current_balance = cash_account.journalentryline_set.aggregate(
-                balance=Sum('debit_amount') - Sum('credit_amount')
-            )['balance'] or Decimal('0.00')
+            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
 
-            if current_balance < trade_cost:
-                raise ValueError(f"Insufficient cash in {trading_account.name} to cover trade cost. Available: {current_balance}, Required: {trade_cost}")
-
-            # Create AssetLot for the purchased asset
-            purchase_price_usd = trade_cost / quantity # Calculate per unit price
+            # ۴. ایجاد دسته خرید (AssetLot) برای دارایی خریداری شده
+            purchase_price_usd = trade_cost / quantity
             AssetLot.objects.create(
                 asset=asset,
                 trading_account=trading_account,
                 quantity=quantity,
-                purchase_price_usd=purchase_price_usd,
-                remaining_quantity=quantity
+                purchase_price_usd=purchase_price_usd
+                # فیلد remaining_quantity به صورت خودکار در متد save مدل پر می‌شود
             )
 
-            # Create journal entry for the purchase
+            # ۵. ایجاد هدر سند حسابداری
             entry = JournalEntry.objects.create(
                 entry_date=timezone.now().date(),
-                description=f"Spot Buy: {quantity} {asset.symbol} for ${trade_cost}: {description}",
+                description=f"Spot Buy: {quantity} {asset.symbol} | {description}",
                 posted_by=user
             )
 
-            # Credit: Cash account decreases
-            JournalEntryLine.objects.create(
-                journal_entry=entry,
-                account=cash_account,
-                credit_amount=trade_cost
-            )
-
-            # Debit: Asset account increases (representing the value of the asset acquired)
-            # Assuming a generic asset account or specific asset accounts are set up
-            # For simplicity, we might debit an 'Inventory' or 'Investments' account (e.g., 1020)
-            # For now, let's assume a generic asset account for purchased assets.
-            # You might need to define a specific ChartOfAccount for 'Investments' or 'Digital Assets'
-            # For this example, let's assume a generic asset account for purchased assets (e.g., 1020)
-            asset_holding_account, created = ChartOfAccount.objects.get_or_create(
-                trading_account=trading_account,
-                account_number='1020', # Example account number for asset holdings
-                defaults={'account_name': 'Asset Holdings', 'account_type': ChartOfAccount.ASSET}
-            )
+            # ۶. ثبت آرتیکل‌های سند حسابداری
+            # بدهکار: ارزش دارایی‌های اسپات ما افزایش می‌یابد
             JournalEntryLine.objects.create(
                 journal_entry=entry,
                 account=asset_holding_account,
                 debit_amount=trade_cost
             )
+            # بستانکار: موجودی نقد ما کاهش می‌یابد
+            JournalEntryLine.objects.create(
+                journal_entry=entry,
+                account=cash_account,
+                credit_amount=trade_cost
+            )
+            
             return entry
 
-        except ChartOfAccount.DoesNotExist:
-            raise ValueError(f"Required cash account (1010) not set up for {trading_account.name}.")
-
-def execute_spot_sell(trading_account, asset, quantity, trade_cost, description, user):
+        except ChartOfAccount.DoesNotExist as e:
+            # این خطا یعنی ساختار حسابداری برای این حساب کامل نیست
+            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. جزئیات: {e}")
+def execute_spot_sell(trading_account, asset, quantity: Decimal, sale_proceeds: Decimal, description: str, user):
     """
-    Handles the selling of a spot asset.
-    Reduces AssetLot quantities and credits the cash account.
+    منطق فروش یک دارایی اسپات را با محاسبه دقیق سود/زیان شناسایی‌شده (Realized P&L)
+    و با استفاده از روش FIFO اجرا می‌کند.
     """
     with transaction.atomic():
-        if not isinstance(quantity, Decimal) or quantity <= 0:
-            raise ValueError("Quantity must be a positive Decimal.")
-        if not isinstance(trade_cost, Decimal) or trade_cost <= 0: # trade_cost here is the proceeds from sale
-            raise ValueError("Trade proceeds must be a positive Decimal.")
-        if asset.asset_type != Asset.SPOT:
-            raise ValueError("Asset must be of type SPOT for this operation.")
+        # ۱. اعتبارسنجی ورودی‌ها
+        if quantity <= 0 or sale_proceeds <= 0:
+            raise ValueError("مقدار و مبلغ فروش باید اعداد مثبت باشند.")
 
-        # Check if enough quantity is available across all lots
+        # ۲. بررسی موجودی کافی دارایی در تمام دسته‌های خرید (Lots)
         available_quantity = AssetLot.objects.filter(
             trading_account=trading_account,
             asset=asset,
@@ -584,92 +573,72 @@ def execute_spot_sell(trading_account, asset, quantity, trade_cost, description,
         ).aggregate(total=Sum('remaining_quantity'))['total'] or Decimal('0.00')
 
         if available_quantity < quantity:
-            raise ValueError(f"Insufficient quantity of {asset.symbol} for sale. Available: {available_quantity}, Attempted: {quantity}")
+            raise ValueError(f"موجودی {asset.symbol} برای فروش کافی نیست. موجودی: {available_quantity}، تلاش برای فروش: {quantity}")
 
-        # Reduce quantity from AssetLots (FIFO - First In, First Out)
-        lots_to_deduct = AssetLot.objects.filter(
-            trading_account=trading_account,
-            asset=asset,
-            remaining_quantity__gt=0
-        ).order_by('purchase_date')
-
-        remaining_to_sell = quantity
-        total_cost_of_sold_assets = Decimal('0.00')
-
-        for lot in lots_to_deduct:
-            if remaining_to_sell <= 0:
-                break
-            
-            deduct_from_lot = min(lot.remaining_quantity, remaining_to_sell)
-            total_cost_of_sold_assets += deduct_from_lot * lot.purchase_price_usd
-            lot.remaining_quantity -= deduct_from_lot
-            lot.save()
-            remaining_to_sell -= deduct_from_lot
-
-        # Calculate realized PnL
-        realized_pnl = trade_cost - total_cost_of_sold_assets
-
-        # Create journal entry for the sale
         try:
+            # ۳. پیدا کردن حساب‌های اصلی مورد نیاز
             cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            # Assuming a generic asset account for sold assets (e.g., 1020)
-            asset_holding_account, created = ChartOfAccount.objects.get_or_create(
-                trading_account=trading_account,
-                account_number='1020', # Example account number for asset holdings
-                defaults={'account_name': 'Asset Holdings', 'account_type': ChartOfAccount.ASSET}
+            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
+            # حساب‌های سود و زیان فروش اسپات را در صورت عدم وجود، ایجاد می‌کنیم
+            # این حساب‌ها عمومی هستند و به حساب معاملاتی خاصی متصل نیستند
+            realized_gain_account, _ = ChartOfAccount.objects.get_or_create(
+                account_number='4030', defaults={'account_name': 'Realized Gain on Spot Sale', 'account_type': REVENUE}
             )
-            # Assuming a realized PnL account (e.g., 4010 for gains, 5010 for losses)
-            realized_pnl_account_number = '4010' if realized_pnl >= 0 else '5010'
-            realized_pnl_account_name = 'Realized Gains' if realized_pnl >= 0 else 'Realized Losses'
-            realized_pnl_account_type = ChartOfAccount.REVENUE if realized_pnl >= 0 else ChartOfAccount.EXPENSE
-
-            realized_pnl_account, created = ChartOfAccount.objects.get_or_create(
-                trading_account=trading_account,
-                account_number=realized_pnl_account_number,
-                defaults={'account_name': realized_pnl_account_name, 'account_type': realized_pnl_account_type}
+            realized_loss_account, _ = ChartOfAccount.objects.get_or_create(
+                account_number='5030', defaults={'account_name': 'Realized Loss on Spot Sale', 'account_type': EXPENSE}
             )
 
+            # ۴. محاسبه هزینه تمام شده (COGS) و به‌روزرسانی دسته‌های خرید با منطق FIFO
+            lots_to_sell_from = AssetLot.objects.filter(
+                trading_account=trading_account,
+                asset=asset,
+                remaining_quantity__gt=0
+            ).order_by('purchase_date')
+
+            remaining_to_sell = quantity
+            cost_of_goods_sold = Decimal('0.00')
+
+            for lot in lots_to_sell_from:
+                if remaining_to_sell <= 0:
+                    break
+                
+                sell_from_this_lot = min(lot.remaining_quantity, remaining_to_sell)
+                cost_of_goods_sold += sell_from_this_lot * lot.purchase_price_usd
+                lot.remaining_quantity -= sell_from_this_lot
+                lot.save()
+                remaining_to_sell -= sell_from_this_lot
+
+            # ۵. محاسبه سود یا زیان شناسایی‌شده
+            realized_pnl = sale_proceeds - cost_of_goods_sold
+
+            # ۶. ایجاد هدر سند حسابداری
             entry = JournalEntry.objects.create(
                 entry_date=timezone.now().date(),
-                description=f"Spot Sell: {quantity} {asset.symbol} for ${trade_cost}. Realized PnL: ${realized_pnl}: {description}",
+                description=f"Spot Sell: {quantity} {asset.symbol} | PnL: {realized_pnl} | {description}",
                 posted_by=user
             )
 
-            # Debit: Cash account increases (proceeds from sale)
-            JournalEntryLine.objects.create(
-                journal_entry=entry,
-                account=cash_account,
-                debit_amount=trade_cost
-            )
-
-            # Credit: Asset account decreases (cost of assets sold)
-            JournalEntryLine.objects.create(
-                journal_entry=entry,
-                account=asset_holding_account,
-                credit_amount=total_cost_of_sold_assets
-            )
-
-            # Handle Realized PnL
-            if realized_pnl != 0:
-                if realized_pnl > 0:
-                    # Credit: Realized Gains account increases
-                    JournalEntryLine.objects.create(
-                        journal_entry=entry,
-                        account=realized_pnl_account,
-                        credit_amount=realized_pnl
-                    )
-                else:
-                    # Debit: Realized Losses account increases
-                    JournalEntryLine.objects.create(
-                        journal_entry=entry,
-                        account=realized_pnl_account,
-                        debit_amount=abs(realized_pnl)
-                    )
+            # ۷. ثبت آرتیکل‌های سند حسابداری
+            # بدهکار: وجه نقد دریافت شده از فروش
+            JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, debit_amount=sale_proceeds)
+            
+            # بستانکار: حذف ارزش دفتری دارایی فروخته شده از دفاتر
+            JournalEntryLine.objects.create(journal_entry=entry, account=asset_holding_account, credit_amount=cost_of_goods_sold)
+            
+            # ثبت سود یا زیان
+            if realized_pnl > 0:
+                # بستانکار: ثبت سود شناسایی‌شده در حساب درآمد
+                JournalEntryLine.objects.create(journal_entry=entry, account=realized_gain_account, credit_amount=realized_pnl)
+            elif realized_pnl < 0:
+                # بدهکار: ثبت زیان شناسایی‌شده در حساب هزینه
+                JournalEntryLine.objects.create(journal_entry=entry, account=realized_loss_account, debit_amount=abs(realized_pnl))
+            
             return entry
 
-        except ChartOfAccount.DoesNotExist:
-            raise ValueError(f"Required accounts not set up for {trading_account.name}.")
-
+        except ChartOfAccount.DoesNotExist as e:
+            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. جزئیات: {e}")
+        
+        
 def generate_income_statement(trading_account, start_date, end_date):
     """
     Generates an income statement for a given trading account within a specified date range.
@@ -708,3 +677,28 @@ def generate_income_statement(trading_account, start_date, end_date):
 
     return income_statement_data
 
+
+
+
+def get_cash_balance(trading_account):
+    """
+    موجودی نقد فعلی یک حساب معاملاتی مشخص را محاسبه کرده و برمی‌گرداند.
+    این تابع، مجموع بدهکارها و بستانکارهای حساب نقد (1010) را محاسبه می‌کند.
+    """
+    try:
+        # پیدا کردن حساب نقد مختص این حساب معاملاتی
+        cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
+        
+        # محاسبه مجموع بدهکارها و بستانکارها در یک کوئری بهینه
+        balance_agg = cash_account.journalentryline_set.aggregate(
+            total_debit=Coalesce(Sum('debit_amount'), Value(Decimal('0.0'))),
+            total_credit=Coalesce(Sum('credit_amount'), Value(Decimal('0.0')))
+        )
+        
+        # موجودی نهایی برای یک حساب دارایی برابر است با: بدهکار - بستانکار
+        balance = balance_agg['total_debit'] - balance_agg['total_credit']
+        return balance
+
+    except ChartOfAccount.DoesNotExist:
+        # اگر حساب نقد اصلا وجود نداشته باشد، موجودی صفر است
+        return Decimal('0.00')

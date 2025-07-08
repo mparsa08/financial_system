@@ -226,8 +226,8 @@ class TradeBuyView(View):
             execute_spot_buy(
                 trading_account=trading_account,
                 asset=asset,
-                quantity=float(quantity),
-                trade_cost=float(trade_cost),
+                quantity=Decimal(quantity),
+                trade_cost=Decimal(trade_cost),
                 description=description,
                 user=request.user
             )
@@ -260,8 +260,8 @@ class TradeSellView(View):
             execute_spot_sell(
                 trading_account=trading_account,
                 asset=asset,
-                quantity=float(quantity),
-                trade_cost=float(trade_cost),
+                quantity=Decimal(quantity),
+                sale_proceeds=Decimal(trade_cost),
                 description=description,
                 user=request.user
             )
