@@ -12,7 +12,7 @@
             <div class="card-body">
                 <p>This function calculates and posts unrealized gains/losses for all your trading accounts.</p>
                 <p class="text-muted">Note: This is a simplified demonstration. In a real system, this would involve fetching real-time market prices and more complex calculations.</p>
-                <form method="post" action="{% url 'calculate_unrealized_pnl' %}">
+                <form method="post" action="{% url 'unrealized_pnl_view' %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-primary">Calculate PnL</button>
                 </form>

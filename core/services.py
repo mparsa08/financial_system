@@ -4,6 +4,195 @@ from django.utils import timezone
 from django.db.models import Sum
 from decimal import Decimal
 from core.models import ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, AssetLot, Asset, ClosedTradesLog
+from .models import ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE # وارد کردن ثابت‌ها از مدل‌ها
+
+
+
+# --- الگوی جامع و نهایی سرفصل‌های حسابداری ---
+CHART_OF_ACCOUNTS_TEMPLATE = [
+    # ۱. دارایی‌ها (Assets)
+    {'number': '1000', 'name': 'Assets', 'type': ASSET, 'children': [
+        {'number': '1010', 'name': 'Cash - {account_name}', 'type': ASSET},
+        
+        # --- اضافه شده: حساب نگهداری دارایی‌های اسپات ---
+        {'number': '1020', 'name': 'Spot Assets Holdings', 'type': ASSET},
+        # ----------------------------------------------
+        
+        {'number': '1030', 'name': 'Derivative Contracts', 'type': ASSET},
+        {'number': '1040', 'name': 'Initial Margin - {account_name}', 'type': ASSET},
+        {'number': '1050', 'name': 'Maintenance Margin - {account_name}', 'type': ASSET},
+        {'number': '1060', 'name': 'Unrealized PnL - Derivatives - {account_name}', 'type': ASSET},
+    ]},
+    
+    # ۲. بدهی‌ها (Liabilities)
+    {'number': '2000', 'name': 'Liabilities', 'type': LIABILITY},
+    
+    # ۳. حقوق صاحبان سهام (Equity)
+    {'number': '3000', 'name': 'Equity', 'type': EQUITY, 'children': [
+        # این حساب، همان حساب مربوط به "سهام‌دار" یا صاحب حساب است
+        {'number': '3010', 'name': 'User Capital - {account_name}', 'type': EQUITY},
+    ]},
+    
+    # ۴. درآمدها (Revenues)
+    {'number': '4000', 'name': 'Revenues', 'type': REVENUE, 'children': [
+        {'number': '4010', 'name': 'Realized PnL - Derivatives - {account_name}', 'type': REVENUE},
+        {'number': '4020', 'name': 'Commissions & Fees', 'type': REVENUE},
+        {'number': '4040', 'name': 'Funding Receipts - {account_name}', 'type': REVENUE},
+        {'number': '4050', 'name': 'Lending Income - {account_name}', 'type': REVENUE},
+        {'number': '4060', 'name': 'Staking Rewards - {account_name}', 'type': REVENUE},
+    ]},
+    
+    # ۵. هزینه‌ها (Expenses)
+    {'number': '5000', 'name': 'Expenses', 'type': EXPENSE, 'children': [
+        {'number': '5010', 'name': 'Trading Fees - {account_name}', 'type': EXPENSE},
+        {'number': '5020', 'name': 'Interest Expense - {account_name}', 'type': EXPENSE},
+        {'number': '5040', 'name': 'Funding Payments - {account_name}', 'type': EXPENSE},
+        {'number': '5050', 'name': 'Withdrawal Fees - {account_name}', 'type': EXPENSE},
+        {'number': '5060', 'name': 'Platform Fees - {account_name}', 'type': EXPENSE},
+    ]},
+]
+
+def _create_accounts_recursively(accounts_list, trading_account, parent_account=None):
+    # این تابع کمکی بدون تغییر باقی می‌ماند
+    for acc_def in accounts_list:
+        new_account = ChartOfAccount.objects.create(
+            trading_account=trading_account,
+            parent_account=parent_account,
+            account_number=acc_def['number'],
+            account_name=acc_def['name'].format(account_name=trading_account.name),
+            account_type=acc_def['type'],
+            is_active=True
+        )
+        if 'children' in acc_def:
+            _create_accounts_recursively(acc_def['children'], trading_account, parent_account=new_account)
+
+def create_trading_account(user, name, account_type, account_purpose):
+    """
+    سرویس اصلی برای ساخت حساب معاملاتی و تمام زیرحساب‌های استاندارد آن.
+    """
+    with transaction.atomic():
+        account = TradingAccount.objects.create(
+            user=user,
+            name=name,
+            account_type=account_type,
+            account_purpose=account_purpose
+        )
+        # فراخوانی تابع کمکی برای ساخت کل ساختار حسابداری برای این حساب جدید
+        _create_accounts_recursively(CHART_OF_ACCOUNTS_TEMPLATE, trading_account=account)
+        return account
+
+def record_closed_trade(trading_account, asset, trade_date, net_profit_or_loss, broker_commission, trader_commission, commission_recipient):
+    """
+    سند حسابداری را برای یک معامله بسته شده ثبت می‌کند.
+    این نسخه کامل و اصلاح شده، شامل منطق سود و زیان و کمیسیون‌های تفکیک شده است.
+    """
+    print("--- Service 'record_closed_trade' STARTED ---")
+    
+    # کل عملیات در یک تراکنش اتمی قرار می‌گیرد تا یا همه انجام شود یا هیچکدام
+    with transaction.atomic():
+        try:
+            # ۱. اعتبارسنجی اولیه
+            if asset.asset_type != Asset.DERIVATIVE:
+                raise ValueError("خطا: فقط دارایی‌های مشتقه می‌توانند ثبت شوند.")
+
+            print("Step 1: Validation passed.")
+
+            # ۲. ایجاد لاگ معامله در دیتابیس
+            trade = ClosedTradesLog.objects.create(
+                trading_account=trading_account,
+                asset=asset,
+                trade_date=trade_date,
+                net_profit_or_loss=net_profit_or_loss,
+                broker_commission=broker_commission,
+                trader_commission=trader_commission,
+                commission_recipient=commission_recipient
+            )
+            print(f"Step 2: ClosedTradesLog #{trade.id} created.")
+
+            # ۳. پیدا کردن حساب‌های اصلی مورد نیاز
+            print("Step 3: Fetching required ChartOfAccount objects...")
+            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
+            pnl_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='4010')
+            fee_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='5010')
+            print(" -> Found Cash, PnL, and Commission Expense accounts.")
+
+            # ۴. ایجاد هدر سند حسابداری
+            entry = JournalEntry.objects.create(
+                entry_date=trade_date,
+                description=f"Closed Trade: {asset.symbol} | PnL: {net_profit_or_loss}",
+                posted_by=trading_account.user
+            )
+            print(f"Step 4: JournalEntry #{entry.id} created.")
+
+            # ۵. ثبت آرتیکل‌های مربوط به سود/زیان خالص
+            print("Step 5: Creating Journal Entry Lines for P&L...")
+            if net_profit_or_loss > 0:
+                # در صورت سود: بدهکار نقد، بستانکار درآمد (حساب 4010)
+                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, debit_amount=net_profit_or_loss)
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, credit_amount=net_profit_or_loss)
+            elif net_profit_or_loss < 0:
+                # در صورت زیان: بدهکار درآمد (حساب 4010)، بستانکار نقد
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, debit_amount=abs(net_profit_or_loss))
+                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=abs(net_profit_or_loss))
+
+            # ۶. ثبت آرتیکل‌های مربوط به کمیسیون
+            print("Step 6: Creating Journal Entry Lines for Commissions...")
+            total_fees = broker_commission + trader_commission
+            if total_fees  > 0:
+                # هزینه کل، حساب هزینه را بدهکار می‌کند
+                JournalEntryLine.objects.create(journal_entry=entry, account=fee_account, debit_amount=total_fees)                  
+                # پرداخت کمیسیون بروکر، نقدینگی را کم می‌کند
+                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=broker_commission)
+
+                print(f" -> Broker commission paid: Credit Cash {broker_commission}")
+                
+                # ج) بستانکار کردن حساب بدهی به تریدر
+                if trader_commission > 0:
+                    liabilities_parent = ChartOfAccount.objects.get(trading_account=trading_account, account_number='2000')
+                    trader_payable_account, created = ChartOfAccount.objects.get_or_create(
+                        trading_account=trading_account,
+                        counterparty_user=commission_recipient,
+                        account_type=LIABILITY,
+                        defaults={
+                            'parent_account': liabilities_parent,
+                            'account_name': f"Payable to: {commission_recipient.username}",
+                            'account_number': f"2010-{commission_recipient.id}",
+                            'is_active': True
+                        }
+                    )
+                    JournalEntryLine.objects.create(journal_entry=entry, account=trader_payable_account, credit_amount=trader_commission)
+                    print(f" -> Trader commission recorded as payable: Credit Payable Account {trader_commission}")
+
+            print("--- Service 'record_closed_trade' FINISHED SUCCESSFULLY ---")
+            return trade 
+
+        except ChartOfAccount.DoesNotExist as e:
+            # اگر هر کدام از حساب‌های اصلی پیدا نشوند، این خطا رخ می‌دهد
+            print(f"--- Service 'record_closed_trade' FAILED ---")
+            print(f"ERROR: A required account was not found. Details: {e}")
+            # این خطا باعث می‌شود transaction.atomic کل عملیات را Rollback کند
+            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. حساب مورد نیاز پیدا نشد.")
+        except Exception as e:
+            print(f"--- Service 'record_closed_trade' FAILED with an unexpected error ---")
+            print(f"ERROR: {e}")
+            raise e # خطا را دوباره ایجاد می‌کنیم تا تراکنش Rollback شود
+
+
+
+
+def delete_trading_account(trading_account: TradingAccount):
+    """
+    Deletes a trading account and all of its related data in the correct order.
+    """
+    with transaction.atomic():
+        # Delete related objects in the correct order to avoid ProtectedError
+        AssetLot.objects.filter(trading_account=trading_account).delete()
+        ClosedTradesLog.objects.filter(trading_account=trading_account).delete()
+        JournalEntry.objects.filter(posted_by=trading_account.user).delete() # This might be too broad, consider a more specific filter
+        ChartOfAccount.objects.filter(trading_account=trading_account).delete()
+        
+        # Finally, delete the trading account itself
+        trading_account.delete()
 
 def make_deposit(trading_account, amount, description, user):
     """
@@ -519,135 +708,3 @@ def generate_income_statement(trading_account, start_date, end_date):
 
     return income_statement_data
 
-def create_trading_account(user, name, account_type, account_purpose):
-    """
-    Creates a new trading account for a user and sets up its initial chart of accounts.
-    """
-    with transaction.atomic():
-        trading_account = TradingAccount.objects.create(
-            user=user,
-            name=name,
-            account_type=account_type,
-            account_purpose=account_purpose
-        )
-
-        # Create default ChartOfAccount entries for the new trading account
-        ChartOfAccount.objects.create(
-            trading_account=trading_account,
-            account_number='1010',
-            account_name='Cash',
-            account_type=ChartOfAccount.ASSET
-        )
-        ChartOfAccount.objects.create(
-            trading_account=trading_account,
-            account_number='3010',
-            account_name='Equity',
-            account_type=ChartOfAccount.EQUITY
-        )
-        # Add other default accounts as needed, e.g., Revenue, Expense, etc.
-        ChartOfAccount.objects.create(
-            trading_account=trading_account,
-            account_number='4010',
-            account_name='Realized Gains',
-            account_type=ChartOfAccount.REVENUE
-        )
-        ChartOfAccount.objects.create(
-            trading_account=trading_account,
-            account_number='5010',
-            account_name='Realized Losses',
-            account_type=ChartOfAccount.EXPENSE
-        )
-        ChartOfAccount.objects.create(
-            trading_account=trading_account,
-            account_number='1020',
-            account_name='Asset Holdings',
-            account_type=ChartOfAccount.ASSET
-        )
-
-        return trading_account
-
-def record_closed_trade(trading_account, asset, trade_date, net_profit_or_loss, commission_fee):
-    """
-    Records a closed trade for derivative assets.
-    """
-    with transaction.atomic():
-        if asset.asset_type != Asset.DERIVATIVE:
-            raise ValueError("Only derivative assets can be recorded as closed trades.")
-
-        ClosedTradesLog.objects.create(
-            trading_account=trading_account,
-            asset=asset,
-            trade_date=trade_date,
-            net_profit_or_loss=net_profit_or_loss,
-            commission_fee=commission_fee
-        )
-
-        # Create journal entries for the closed trade
-        # This is a simplified example. Real-world accounting for derivatives can be complex.
-        try:
-            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            # Assuming a realized PnL account (e.g., 4010 for gains, 5010 for losses)
-            realized_pnl_account_number = '4010' if net_profit_or_loss >= 0 else '5010'
-            realized_pnl_account_name = 'Realized Gains' if net_profit_or_loss >= 0 else 'Realized Losses'
-            realized_pnl_account_type = ChartOfAccount.REVENUE if net_profit_or_loss >= 0 else ChartOfAccount.EXPENSE
-
-            realized_pnl_account, created = ChartOfAccount.objects.get_or_create(
-                trading_account=trading_account,
-                account_number=realized_pnl_account_number,
-                defaults={'account_name': realized_pnl_account_name, 'account_type': realized_pnl_account_type}
-            )
-
-            entry = JournalEntry.objects.create(
-                entry_date=trade_date,
-                description=f"Closed Trade: {asset.symbol} - PnL: {net_profit_or_loss}",
-                posted_by=trading_account.user # Assuming the user of the trading account is the poster
-            )
-
-            # Handle PnL
-            if net_profit_or_loss > 0:
-                # Debit cash, Credit realized gains
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=cash_account,
-                    debit_amount=net_profit_or_loss
-                )
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=realized_pnl_account,
-                    credit_amount=net_profit_or_loss
-                )
-            elif net_profit_or_loss < 0:
-                # Debit realized losses, Credit cash
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=realized_pnl_account,
-                    debit_amount=abs(net_profit_or_loss)
-                )
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=cash_account,
-                    credit_amount=abs(net_profit_or_loss)
-                )
-            
-            # Handle commission fee (if any)
-            if commission_fee and commission_fee > 0:
-                commission_expense_account, created = ChartOfAccount.objects.get_or_create(
-                    trading_account=trading_account,
-                    account_number='5020', # Example account for commission expense
-                    defaults={'account_name': 'Commission Expense', 'account_type': ChartOfAccount.EXPENSE}
-                )
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=commission_expense_account,
-                    debit_amount=commission_fee
-                )
-                JournalEntryLine.objects.create(
-                    journal_entry=entry,
-                    account=cash_account,
-                    credit_amount=commission_fee
-                )
-
-            return entry
-
-        except ChartOfAccount.DoesNotExist:
-            raise ValueError(f"Required accounts not set up for {trading_account.name}.")

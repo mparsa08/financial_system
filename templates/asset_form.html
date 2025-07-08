@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Asset{% else %}Create Asset{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{% if object %}Edit Asset{% else %}Create Asset{% endif %}</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    {{ form.symbol.label_tag }}
+                    {{ form.symbol }}
+                    {% if form.symbol.errors %}
+                        <div class="text-danger">{{ form.symbol.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.name.label_tag }}
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="text-danger">{{ form.name.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.asset_type.label_tag }}
+                    {{ form.asset_type }}
+                    {% if form.asset_type.errors %}
+                        <div class="text-danger">{{ form.asset_type.errors|first }}</div>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-success">{% if object %}Update{% else %}Create{% endif %}</button>
+                <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

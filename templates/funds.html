@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Fund Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="fundTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="deposit-tab" data-bs-toggle="tab" data-bs-target="#deposit" type="button" role="tab" aria-controls="deposit" aria-selected="true">Deposit</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="withdraw-tab" data-bs-toggle="tab" data-bs-target="#withdraw" type="button" role="tab" aria-controls="withdraw" aria-selected="false">Withdraw</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer" type="button" role="tab" aria-controls="transfer" aria-selected="false">Transfer</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="fundTabsContent">
+                    <!-- Deposit Tab -->
+                    <div class="tab-pane fade show active" id="deposit" role="tabpanel" aria-labelledby="deposit-tab">
+                        <h5 class="card-title">Deposit Funds</h5>
+                        <form method="post" action="{% url 'deposit_funds' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="deposit_trading_account" class="form-label">Trading Account</label>
+                                <select class="form-select" id="deposit_trading_account" name="trading_account_id" required>
+                                    {% for account in trading_accounts %}
+                                        <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="deposit_amount" class="form-label">Amount</label>
+                                <input type="number" step="0.01" class="form-control" id="deposit_amount" name="amount" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="deposit_description" class="form-label">Description</label>
+                                <textarea class="form-control" id="deposit_description" name="description" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Deposit</button>
+                        </form>
+                    </div>
+                    <!-- Withdraw Tab -->
+                    <div class="tab-pane fade" id="withdraw" role="tabpanel" aria-labelledby="withdraw-tab">
+                        <h5 class="card-title">Withdraw Funds</h5>
+                        <form method="post" action="{% url 'withdraw_funds' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="withdraw_trading_account" class="form-label">Trading Account</label>
+                                <select class="form-select" id="withdraw_trading_account" name="trading_account_id" required>
+                                    {% for account in trading_accounts %}
+                                        <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="withdraw_amount" class="form-label">Amount</label>
+                                <input type="number" step="0.01" class="form-control" id="withdraw_amount" name="amount" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="withdraw_description" class="form-label">Description</label>
+                                <textarea class="form-control" id="withdraw_description" name="description" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Withdraw</button>
+                        </form>
+                    </div>
+                    <!-- Transfer Tab -->
+                    <div class="tab-pane fade" id="transfer" role="tabpanel" aria-labelledby="transfer-tab">
+                        <h5 class="card-title">Transfer Funds</h5>
+                        <form method="post" action="{% url 'transfer_funds' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="from_trading_account" class="form-label">From Account</label>
+                                <select class="form-select" id="from_trading_account" name="from_trading_account_id" required>
+                                    {% for account in trading_accounts %}
+                                        <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="to_trading_account" class="form-label">To Account</label>
+                                <select class="form-select" id="to_trading_account" name="to_trading_account_id" required>
+                                    {% for account in trading_accounts %}
+                                        <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transfer_amount" class="form-label">Amount</label>
+                                <input type="number" step="0.01" class.form-control" id="transfer_amount" name="amount" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Transfer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

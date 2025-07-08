@@ -3,35 +3,82 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                Trading Account Summary
-            </div>
-            <div class="card-body">
-                <h5 class="card-title">Welcome, {{ user.username }}!</h5>
-                <p class="card-text">Here is a summary of your trading accounts:</p>
-                <ul class="list-group list-group-flush">
-                    {% for account in trading_accounts %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ account.name }} ({{ account.get_account_type_display }}) - {{ account.get_account_purpose_display }}
-                            <a href="{% url 'delete_trading_account' account.id %}" class="btn btn-danger btn-sm">Delete</a>
-                        </li>
-                    {% empty %}
-                        <li class="list-group-item">No trading accounts found. <a href="{% url 'create_trading_account' %}">Create one now!</a></li>
-                    {% endfor %}
-                </ul>
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h4 class="card-title"><i class="bi bi-speedometer2"></i> Quick Actions</h4>
+                    <p class="card-text">Perform common actions quickly.</p>
+                    <a href="{% url 'deposit_funds' %}" class="btn btn-success"><i class="bi bi-box-arrow-in-down"></i> Deposit</a>
+                    <a href="{% url 'withdraw_funds' %}" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> Withdraw</a>
+                    <a href="{% url 'trade_assets' %}" class="btn btn-info"><i class="bi bi-graph-up-arrow"></i> New Trade</a>
+                    <a href="{% url 'transfer_funds' %}" class="btn btn-secondary"><i class="bi bi-arrow-left-right"></i> Transfer Funds</a>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                Recent Activity
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-briefcase-fill"></i> Trading Account Summary
+                </div>
+                <div class="card-body">
+                    {% if trading_accounts %}
+                        <ul class="list-group list-group-flush">
+                            {% for account in trading_accounts %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">{{ account.name }}</h6>
+                                        <small class="text-muted">{{ account.get_account_type_display }} - {{ account.get_account_purpose_display }}</small>
+                                    </div>
+                                    <a href="{% url 'delete_trading_account' account.id %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-center p-3">
+                            <p>No trading accounts found.</p>
+                            <a href="{% url 'create_trading_account' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Create One Now</a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <p class="card-text">Your recent transactions will be displayed here.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-clock-history"></i> Recent Activity
+                </div>
+                <div class="card-body">
+                                        {% if recent_transactions %}
+                        <ul class="list-group list-group-flush">
+                            {% for line in recent_transactions %}
+                                <li class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ line.journal_entry.description|truncatewords:5 }}</h6>
+                                        <small>{{ line.journal_entry.entry_date }}</small>
+                                    </div>
+                                    <p class="mb-1 text-muted">{{ line.account.account_name }}</p>
+                                    <small class="{% if line.debit_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                                        {% if line.debit_amount > 0 %}
+                                            <i class="bi bi-arrow-up-right"></i> Debit: {{ line.debit_amount }}
+                                        {% else %}
+                                            <i class="bi bi-arrow-down-left"></i> Credit: {{ line.credit_amount }}
+                                        {% endif %}
+                                    </small>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="card-footer text-center">
+                            <a href="{% url 'transaction_history' %}">View all transactions</a>
+                        </div>
+                    {% else %}
+                        <p class="card-text text-muted">No recent transactions found.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

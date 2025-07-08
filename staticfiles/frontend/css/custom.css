@@ -1,0 +1,13 @@
+/* Custom CSS for Financial System */
+
+body {
+    background-color: #f8f9fa; /* A light grey background for a cleaner look */
+}
+
+.container {
+    max-width: 1200px; /* A wider container for larger screens */
+}
+
+.card {
+    margin-bottom: 1.5rem;
+}

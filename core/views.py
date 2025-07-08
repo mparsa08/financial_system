@@ -1,6 +1,7 @@
 # --- Imports from Django ---
 from datetime import datetime
 import decimal
+from django.db import transaction
 from django.utils import timezone
 from django.views.generic import TemplateView
 
@@ -23,7 +24,7 @@ from .models import (
     ClosedTradesLog
 )
 from .serializers import *
-from .services import generate_income_statement, make_deposit, make_withdrawal, deposit_spot_asset, withdraw_spot_asset, execute_spot_buy, execute_spot_sell
+from .services import generate_income_statement, make_deposit, make_withdrawal, deposit_spot_asset, withdraw_spot_asset, execute_spot_buy, execute_spot_sell, record_closed_trade
 from .permissions import IsAdminUser, IsAccountantUser, IsTraderUser
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -301,6 +302,49 @@ class ClosedTradesLogViewSet(viewsets.ModelViewSet):
         if self.request.user.role == 'Admin':
             return ClosedTradesLog.objects.all()
         return ClosedTradesLog.objects.filter(trading_account__user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        with transaction.atomic():
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            # Extract data for the service function
+            trading_account_id = serializer.validated_data.get('trading_account').id
+            asset_id = serializer.validated_data.get('asset').id
+            trade_date = serializer.validated_data.get('trade_date')
+            net_profit_or_loss = serializer.validated_data.get('net_profit_or_loss')
+            broker_commission = serializer.validated_data.get('broker_commission')
+            trader_commission = serializer.validated_data.get('trader_commission')
+            commission_recipient_id = serializer.validated_data.get('commission_recipient').id if serializer.validated_data.get('commission_recipient') else None
+
+            try:
+                # Fetch related objects
+                trading_account = TradingAccount.objects.get(id=trading_account_id)
+                asset = Asset.objects.get(id=asset_id)
+                commission_recipient = User.objects.get(id=commission_recipient_id) if commission_recipient_id else None
+
+                # Call the service function
+                record_closed_trade(
+                    trading_account=trading_account,
+                    asset=asset,
+                    trade_date=trade_date,
+                    net_profit_or_loss=net_profit_or_loss,
+                    broker_commission=broker_commission,
+                    trader_commission=trader_commission,
+                    commission_recipient=commission_recipient
+                )
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except TradingAccount.DoesNotExist:
+                return Response({"error": "Trading account not found."}, status=status.HTTP_404_NOT_FOUND)
+            except Asset.DoesNotExist:
+                return Response({"error": "Asset not found."}, status=status.HTTP_404_NOT_FOUND)
+            except User.DoesNotExist:
+                return Response({"error": "Commission recipient user not found."}, status=status.HTTP_404_NOT_FOUND)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({"error": f"An unexpected error occurred: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class DashboardView(TemplateView):

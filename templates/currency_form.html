@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Currency{% else %}Create Currency{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{% if object %}Edit Currency{% else %}Create Currency{% endif %}</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-success">{% if object %}Update{% else %}Create{% endif %}</button>
+                <a href="{% url 'currency_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
