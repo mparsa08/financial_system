@@ -1,38 +1,47 @@
 /* RTL specific custom styles */
 
-body {
+/*
+   All rules in this file are scoped to pages where the HTML
+   element has dir="rtl". This avoids interfering with the
+   default left-to-right layout when viewing English pages.
+*/
+
+html[dir="rtl"] body {
+    direction: rtl;
     text-align: right;
 }
 
 /* Ensure form labels are right aligned */
-label,
-.form-label {
+html[dir="rtl"] label,
+html[dir="rtl"] .form-label {
     text-align: right;
     float: right;
 }
 
 /* Tables should display content right aligned */
-table,
-.table th,
-.table td {
+html[dir="rtl"] table,
+html[dir="rtl"] .table th,
+html[dir="rtl"] .table td {
     text-align: right;
 }
 
 /* Navbar links and dropdown menus */
-.navbar .navbar-nav {
+html[dir="rtl"] .navbar .navbar-nav {
     margin-left: auto;
     margin-right: 0;
     text-align: right;
 }
 
-.navbar .dropdown-menu {
+html[dir="rtl"] .navbar .dropdown-menu {
     text-align: right;
+    right: 0;
+    left: auto;
 }
 
 /* Alerts */
-.alert {
+html[dir="rtl"] .alert {
     text-align: right;
 }
-.alert .btn-close {
+html[dir="rtl"] .alert .btn-close {
     float: left;
 }
