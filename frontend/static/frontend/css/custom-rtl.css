@@ -1,6 +1,4 @@
 /* RTL specific custom styles */
-
-codex/add-persian-web-font-and-styles
 /* Persian font */
 body {
     font-family: 'Vazirmatn', sans-serif;
@@ -33,7 +31,8 @@ body {
 .alert-danger {
     background-color: var(--rtl-accent);
     border-color: var(--rtl-accent);
-=======
+}
+
 /*
    All rules in this file are scoped to pages where the HTML
    element has dir="rtl". This avoids interfering with the
@@ -78,5 +77,4 @@ html[dir="rtl"] .alert {
 }
 html[dir="rtl"] .alert .btn-close {
     float: left;
-dev
 }
