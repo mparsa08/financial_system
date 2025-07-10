@@ -1,5 +1,6 @@
 /* RTL specific custom styles */
 
+codex/add-persian-web-font-and-styles
 /* Persian font */
 body {
     font-family: 'Vazirmatn', sans-serif;
@@ -32,4 +33,50 @@ body {
 .alert-danger {
     background-color: var(--rtl-accent);
     border-color: var(--rtl-accent);
+=======
+/*
+   All rules in this file are scoped to pages where the HTML
+   element has dir="rtl". This avoids interfering with the
+   default left-to-right layout when viewing English pages.
+*/
+
+html[dir="rtl"] body {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Ensure form labels are right aligned */
+html[dir="rtl"] label,
+html[dir="rtl"] .form-label {
+    text-align: right;
+    float: right;
+}
+
+/* Tables should display content right aligned */
+html[dir="rtl"] table,
+html[dir="rtl"] .table th,
+html[dir="rtl"] .table td {
+    text-align: right;
+}
+
+/* Navbar links and dropdown menus */
+html[dir="rtl"] .navbar .navbar-nav {
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+}
+
+html[dir="rtl"] .navbar .dropdown-menu {
+    text-align: right;
+    right: 0;
+    left: auto;
+}
+
+/* Alerts */
+html[dir="rtl"] .alert {
+    text-align: right;
+}
+html[dir="rtl"] .alert .btn-close {
+    float: left;
+dev
 }
