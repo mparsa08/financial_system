@@ -1,1 +1,38 @@
-/* Add your RTL specific custom styles here */
+/* RTL specific custom styles */
+
+body {
+    text-align: right;
+}
+
+/* Ensure form labels are right aligned */
+label,
+.form-label {
+    text-align: right;
+    float: right;
+}
+
+/* Tables should display content right aligned */
+table,
+.table th,
+.table td {
+    text-align: right;
+}
+
+/* Navbar links and dropdown menus */
+.navbar .navbar-nav {
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+}
+
+.navbar .dropdown-menu {
+    text-align: right;
+}
+
+/* Alerts */
+.alert {
+    text-align: right;
+}
+.alert .btn-close {
+    float: left;
+}
