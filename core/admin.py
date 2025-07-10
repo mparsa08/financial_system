@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Currency, ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, Asset, AssetLot  , ClosedTradesLog
+from .models import User, Currency, ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, Asset, AssetLot  , Trade
 from django import forms
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
@@ -19,19 +19,43 @@ admin.site.register(JournalEntryLine)
 
 
 
-
-# ۲. سفارشی‌سازی برای ClosedTradesLog (این کد از قبل وجود داشت و صحیح است)
-@admin.register(ClosedTradesLog)
-class ClosedTradesLogAdmin(admin.ModelAdmin):
-    list_display = ('asset', 'trade_date', 'net_profit_or_loss', 'trading_account')
-    list_filter = ('trade_date', 'trading_account')
+@admin.register(Trade)
+class TradeAdmin(admin.ModelAdmin):
+    # فیلدهایی که در لیست نمایش داده می‌شوند
+    list_display = (
+        'id', 
+        'status', 
+        'position_side', 
+        'asset', 
+        'trading_account', 
+        'entry_date', 
+        'exit_date', 
+        'gross_profit_or_loss'
+    )
+    # فیلترهایی که در سایدبار نمایش داده می‌شوند
+    list_filter = ('status', 'position_side', 'trading_account', 'asset')
+    # فیلدهایی که قابل جستجو هستند
     search_fields = ('asset__name', 'trading_account__name')
+    
+    # فیلدهایی که در فرم ویرایش، فقط خواندنی هستند تا از خطای انسانی جلوگیری شود
+    # این فیلدها باید فقط از طریق سرویس close_trade پر شوند
+    readonly_fields = (
+        'exit_price', 
+        'exit_date', 
+        'gross_profit_or_loss', 
+        'broker_commission',
+        'trader_commission',
+        'commission_recipient'
+    )
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        این متد گزینه‌های دراپ‌داون 'asset' را فیلتر می‌کند.
+        """
         if db_field.name == "asset":
+            # فقط دارایی‌های از نوع مشتقه را نمایش بده
             kwargs["queryset"] = Asset.objects.filter(asset_type=Asset.DERIVATIVE)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
 
 
 @admin.register(Asset)

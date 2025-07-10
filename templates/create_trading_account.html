@@ -1,21 +1,22 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Create Trading Account{% endblock %}
+{% block title %}{% trans "Create Trading Account" %}{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-md-6 offset-md-3">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title">Create New Trading Account</h5>
+                <h5 class="card-title">{% trans "Create New Trading Account" %}</h5>
             </div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
                     {{ form.as_p }}
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Create Account</button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">{% trans "Create Account" %}</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
                     </div>
                 </form>
             </div>

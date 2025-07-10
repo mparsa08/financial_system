@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from django.utils import timezone
+
 
 
 ASSET = 'Asset'
@@ -183,41 +185,53 @@ class AssetLot(models.Model):
         super().save(*args, **kwargs)
 
 # مدل معاملات مشتقه (Futures/CFD)
+class Trade(models.Model):
+    """
+    یک مدل واحد برای نگهداری تمام اطلاعات یک معامله، از باز شدن تا بسته شدن.
+    """
+    # --- وضعیت‌های ممکن برای یک معامله ---
+    OPEN = 'OPEN'
+    CLOSED = 'CLOSED'
+    STATUS_CHOICES = [
+        (OPEN, 'Open'),
+        (CLOSED, 'Closed'),
+    ]
 
-class ClosedTradesLog(models.Model):
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    trade_date = models.DateField()
-    net_profit_or_loss = models.DecimalField(max_digits=10, decimal_places=2)
-    trading_account = models.ForeignKey(TradingAccount, on_delete=models.CASCADE)
+    # --- طرف معامله ---
+    LONG = 'LONG'
+    SHORT = 'SHORT'
+    SIDE_CHOICES = [
+        (LONG, 'Long'),
+        (SHORT, 'Short'),
+    ]
+    
+    # --- بخش اطلاعات اصلی ---
+    trading_account = models.ForeignKey(TradingAccount, on_delete=models.CASCADE, related_name="trades")
+    asset = models.ForeignKey(Asset, on_delete=models.PROTECT, limit_choices_to={'asset_type': Asset.DERIVATIVE})
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=OPEN)
+    
+    # --- بخش اطلاعات باز کردن معامله ---
+    position_side = models.CharField(max_length=10, choices=SIDE_CHOICES)
+    entry_price = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    quantity = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    entry_date = models.DateTimeField(default=timezone.now, null=True, blank=True)
+    
+    # --- بخش اطلاعات بستن معامله (در ابتدا خالی هستند) ---
+    exit_price = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    exit_date = models.DateTimeField(null=True, blank=True)
+    exit_description = models.TextField(blank=True, null=True, help_text="توضیحات مربوط به بستن معامله")
 
-    broker_commission = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="کمیسیون پرداخت شده به بروکر"
-    )
-    trader_commission = models.DecimalField(
-        max_digits=10, decimal_places=2, help_text="کمیسیون متعلق به تریدر"
-    )
-
+    # --- بخش اطلاعات مالی (در ابتدا خالی هستند) ---
+    gross_profit_or_loss = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    broker_commission = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    trader_commission = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     commission_recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='received_commissions',
-        help_text="تریدری که کمیسیون به او تعلق دارد"
+        null=True,
+        blank=True,
+        related_name='commissioned_trades'
     )
 
-    # --- لایه دفاعی نهایی ---
-    def clean(self):
-        """متد اعتبارسنجی مدل."""
-        super().clean()
-        if self.asset and self.asset.asset_type != Asset.DERIVATIVE:
-            raise ValidationError({
-                'asset': 'این دارایی از نوع DERIVATIVE نیست و فقط معاملات مشتقه می‌توانند در این بخش ثبت شوند.'
-            })
-
-    def save(self, *args, **kwargs):
-        """بازنویسی متد ذخیره برای اجرای اعتبارسنجی قبل از ذخیره."""
-        self.full_clean()
-        super().save(*args, **kwargs)
-    # --- پایان لایه دفاعی ---
-
     def __str__(self):
-        return f"Trade {self.id} on {self.trade_date}"
+        return f"[{self.status}] {self.position_side} {self.quantity} {self.asset.symbol}"

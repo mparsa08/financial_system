@@ -4,8 +4,8 @@ from django.utils import timezone
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 from decimal import Decimal
-from core.models import ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, AssetLot, Asset, ClosedTradesLog
-from .models import ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE # وارد کردن ثابت‌ها از مدل‌ها
+from core.models import ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, AssetLot, Asset
+from .models import ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE, Trade # وارد کردن ثابت‌ها از مدل‌ها
 
 
 
@@ -82,118 +82,187 @@ def create_trading_account(user, name, account_type, account_purpose):
         _create_accounts_recursively(CHART_OF_ACCOUNTS_TEMPLATE, trading_account=account)
         return account
 
-def record_closed_trade(trading_account, asset, trade_date, net_profit_or_loss, broker_commission, trader_commission, commission_recipient):
+
+def record_direct_closed_trade(
+    trading_account, asset, position_side, quantity, entry_price, 
+    exit_price, exit_date, gross_pnl, broker_commission, 
+    trader_commission, commission_recipient, exit_description):
     """
-    سند حسابداری را برای یک معامله بسته شده ثبت می‌کند.
-    این نسخه کامل و اصلاح شده، شامل منطق سود و زیان و کمیسیون‌های تفکیک شده است.
+    یک معامله کامل (باز و بسته شده) را در یک مرحله ثبت می‌کند.
+    یک آبجکت Trade با وضعیت CLOSED ایجاد کرده و سند حسابداری آن را صادر می‌کند.
     """
-    print("--- Service 'record_closed_trade' STARTED ---")
-    
-    # کل عملیات در یک تراکنش اتمی قرار می‌گیرد تا یا همه انجام شود یا هیچکدام
     with transaction.atomic():
-        try:
-            # ۱. اعتبارسنجی اولیه
-            if asset.asset_type != Asset.DERIVATIVE:
-                raise ValueError("خطا: فقط دارایی‌های مشتقه می‌توانند ثبت شوند.")
+        # ۱. اعتبارسنجی اولیه
+        if asset.asset_type != Asset.DERIVATIVE:
+            raise ValueError("این قابلیت فقط برای دارایی‌های مشتقه است.")
 
-            print("Step 1: Validation passed.")
+        # ۲. ایجاد آبجکت Trade با تمام اطلاعات و وضعیت CLOSED
+        trade = Trade.objects.create(
+            trading_account=trading_account,
+            asset=asset,
+            status=Trade.CLOSED,  # <-- وضعیت از ابتدا بسته است
+            position_side=position_side,
+            quantity=quantity,
+            entry_price=entry_price,
+            entry_date=exit_date, # تاریخ ورود را همان تاریخ خروج در نظر می‌گیریم
+            
+            # اطلاعات بستن معامله
+            exit_price=exit_price,
+            exit_date=exit_date,
+            exit_description=exit_description,
+            gross_profit_or_loss=gross_pnl,
+            broker_commission=broker_commission,
+            trader_commission=trader_commission,
+            commission_recipient=commission_recipient
+        )
 
-            # ۲. ایجاد لاگ معامله در دیتابیس
-            trade = ClosedTradesLog.objects.create(
-                trading_account=trading_account,
-                asset=asset,
-                trade_date=trade_date,
-                net_profit_or_loss=net_profit_or_loss,
-                broker_commission=broker_commission,
-                trader_commission=trader_commission,
-                commission_recipient=commission_recipient
-            )
-            print(f"Step 2: ClosedTradesLog #{trade.id} created.")
+        # ۳. فراخوانی تابع کمکی برای صدور سند حسابداری
+        # ما از همان منطق حسابداری قبلی خود دوباره استفاده می‌کنیم
+        create_journal_entry_for_closed_trade(trade)
 
-            # ۳. پیدا کردن حساب‌های اصلی مورد نیاز
-            print("Step 3: Fetching required ChartOfAccount objects...")
-            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            pnl_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='4010')
-            fee_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='5010')
-            print(" -> Found Cash, PnL, and Commission Expense accounts.")
+        return trade
 
-            # ۴. ایجاد هدر سند حسابداری
-            entry = JournalEntry.objects.create(
-                entry_date=trade_date,
-                description=f"Closed Trade: {asset.symbol} | PnL: {net_profit_or_loss}",
-                posted_by=trading_account.user
-            )
-            print(f"Step 4: JournalEntry #{entry.id} created.")
+def open_trade(trading_account, asset, side, quantity, entry_price):
+    """
+    یک معامله جدید با وضعیت 'OPEN' ایجاد می‌کند.
+    این تابع هیچ سند حسابداری صادر نمی‌کند چون هنوز سود یا زیانی رخ نداده.
+    """
+    # ... (می‌توانید اعتبارسنجی‌های اولیه را اینجا اضافه کنید) ...
 
-            # ۵. ثبت آرتیکل‌های مربوط به سود/زیان خالص
-            print("Step 5: Creating Journal Entry Lines for P&L...")
-            if net_profit_or_loss > 0:
-                # در صورت سود: بدهکار نقد، بستانکار درآمد (حساب 4010)
-                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, debit_amount=net_profit_or_loss)
-                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, credit_amount=net_profit_or_loss)
-            elif net_profit_or_loss < 0:
-                # در صورت زیان: بدهکار درآمد (حساب 4010)، بستانکار نقد
-                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, debit_amount=abs(net_profit_or_loss))
-                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=abs(net_profit_or_loss))
+    trade = Trade.objects.create(
+        trading_account=trading_account,
+        asset=asset,
+        position_side=side,
+        quantity=quantity,
+        entry_price=entry_price,
+        status=Trade.OPEN
+    )
+    return trade
 
-            # ۶. ثبت آرتیکل‌های مربوط به کمیسیون
-            print("Step 6: Creating Journal Entry Lines for Commissions...")
-            total_fees = broker_commission + trader_commission
-            if total_fees  > 0:
-                # هزینه کل، حساب هزینه را بدهکار می‌کند
-                JournalEntryLine.objects.create(journal_entry=entry, account=fee_account, debit_amount=total_fees)                  
-                # پرداخت کمیسیون بروکر، نقدینگی را کم می‌کند
-                JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=broker_commission)
+def close_trade(trade_to_close, gross_profit_or_loss, broker_commission, trader_commission, commission_recipient, exit_description):
+    """
+    یک معامله باز را می‌بندد: فیلدهای آن را به‌روز کرده، سود/زیان را محاسبه
+    و سپس تابع ثبت سند حسابداری را فراخوانی می‌کند.
+    """
+    with transaction.atomic():
+        # ۱. اعتبارسنجی
+        if trade_to_close.status == Trade.CLOSED:
+            raise ValueError("این معامله از قبل بسته شده است.")
 
-                print(f" -> Broker commission paid: Credit Cash {broker_commission}")
-                
-                # ج) بستانکار کردن حساب بدهی به تریدر
-                if trader_commission > 0:
-                    liabilities_parent = ChartOfAccount.objects.get(trading_account=trading_account, account_number='2000')
-                    trader_payable_account, created = ChartOfAccount.objects.get_or_create(
-                        trading_account=trading_account,
-                        counterparty_user=commission_recipient,
-                        account_type=LIABILITY,
-                        defaults={
-                            'parent_account': liabilities_parent,
-                            'account_name': f"Payable to: {commission_recipient.username}",
-                            'account_number': f"2010-{commission_recipient.id}",
-                            'is_active': True
-                        }
-                    )
-                    JournalEntryLine.objects.create(journal_entry=entry, account=trader_payable_account, credit_amount=trader_commission)
-                    print(f" -> Trader commission recorded as payable: Credit Payable Account {trader_commission}")
+        # ۲. به‌روزرسانی فیلدهای خود معامله
+        trade_to_close.status = Trade.CLOSED
+        trade_to_close.exit_date = timezone.now()
+        trade_to_close.gross_profit_or_loss = gross_profit_or_loss
+        trade_to_close.broker_commission = broker_commission
+        trade_to_close.trader_commission = trader_commission
+        trade_to_close.commission_recipient = commission_recipient
+        trade_to_close.exit_description = exit_description
+        trade_to_close.save()
 
-            print("--- Service 'record_closed_trade' FINISHED SUCCESSFULLY ---")
-            return trade 
+        # ۳. فراخوانی تابع حسابداری (که حالا نام آن را تغییر می‌دهیم)
+        create_journal_entry_for_closed_trade(trade_to_close)
 
-        except ChartOfAccount.DoesNotExist as e:
-            # اگر هر کدام از حساب‌های اصلی پیدا نشوند، این خطا رخ می‌دهد
-            print(f"--- Service 'record_closed_trade' FAILED ---")
-            print(f"ERROR: A required account was not found. Details: {e}")
-            # این خطا باعث می‌شود transaction.atomic کل عملیات را Rollback کند
-            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. حساب مورد نیاز پیدا نشد.")
-        except Exception as e:
-            print(f"--- Service 'record_closed_trade' FAILED with an unexpected error ---")
-            print(f"ERROR: {e}")
-            raise e # خطا را دوباره ایجاد می‌کنیم تا تراکنش Rollback شود
+        return trade_to_close
+    
+def create_journal_entry_for_closed_trade(trade: Trade):
+    """
+    فقط وظیفه ساخت سند حسابداری برای یک معامله بسته شده را بر عهده دارد.
+    این تابع منطق حسابداری را بر اساس سود، زیان و کمیسیون‌های تفکیک شده اجرا می‌کند
+    و تمام اطلاعات را از آبجکت Trade دریافت می‌کند.
+    """
+    try:
+        # ۱. استخراج اطلاعات از آبجکت trade
+        trading_account = trade.trading_account
+        gross_pnl = trade.gross_profit_or_loss or Decimal('0.0')
+        broker_commission = trade.broker_commission or Decimal('0.0')
+        trader_commission = trade.trader_commission or Decimal('0.0')
+        commission_recipient = trade.commission_recipient
 
+        # ۲. پیدا کردن حساب‌های اصلی مورد نیاز از سرفصل‌ها
+        cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
+        pnl_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='4010') # حساب درآمد/زیان
+        fee_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='5010') # حساب هزینه کارمزد
 
+        # ۳. ایجاد هدر سند حسابداری
+        entry = JournalEntry.objects.create(
+            entry_date=trade.exit_date.date(),
+            description=f"Journal Entry for Closed Trade #{trade.id}: {trade.asset.symbol}",
+            posted_by=trading_account.user
+        )
+
+        # ۴. ثبت آرتیکل‌های مربوط به سود/زیان ناخالص
+        if gross_pnl > 0:
+            # در صورت سود: بدهکار نقد، بستانکار درآمد (حساب 4010)
+            JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, debit_amount=gross_pnl)
+            JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, credit_amount=gross_pnl)
+        elif gross_pnl < 0:
+            # در صورت زیان: بدهکار درآمد (حساب 4010)، بستانکار نقد
+            # توجه: زیان نیز در حساب درآمد ثبت می‌شود اما به صورت بدهکار
+            JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, debit_amount=abs(gross_pnl))
+            JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=abs(gross_pnl))
+
+        # ۵. ثبت آرتیکل‌های مربوط به کمیسیون
+        total_fees = broker_commission + trader_commission
+        if total_fees > 0:
+            # الف) هزینه کل، حساب هزینه (5010) را بدهکار می‌کند
+            JournalEntryLine.objects.create(journal_entry=entry, account=fee_account, debit_amount=total_fees)
+            
+            # ب) پرداخت کمیسیون بروکر، نقدینگی را کم می‌کند (بستانکار)
+            JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, credit_amount=broker_commission)
+            
+            # ج) کمیسیون تریدر، بدهی ایجاد می‌کند (بستانکار)
+            if trader_commission > 0 and commission_recipient:
+                liabilities_parent = ChartOfAccount.objects.get(trading_account=trading_account, account_number='2000')
+                payable_account, _ = ChartOfAccount.objects.get_or_create(
+                    trading_account=trading_account,
+                    counterparty_user=commission_recipient,
+                    account_type=LIABILITY,
+                    defaults={
+                        'parent_account': liabilities_parent,
+                        'account_name': f"Payable to: {commission_recipient.username}",
+                        'account_number': f"2010-{commission_recipient.id}",
+                        'is_active': True
+                    }
+                )
+                JournalEntryLine.objects.create(journal_entry=entry, account=payable_account, credit_amount=trader_commission)
+        
+        return entry
+
+    except ChartOfAccount.DoesNotExist as e:
+        raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. حساب مورد نیاز پیدا نشد. جزئیات: {e}")
 
 
 def delete_trading_account(trading_account: TradingAccount):
     """
-    Deletes a trading account and all of its related data in the correct order.
+    یک حساب معاملاتی و تمام داده‌های مرتبط با آن را به ترتیب صحیح حذف می‌کند.
+    این نسخه اصلاح شده، با مدل یکپارچه Trade کار می‌کند.
     """
     with transaction.atomic():
-        # Delete related objects in the correct order to avoid ProtectedError
+        # ۱. پیدا کردن تمام سندهای حسابداری مرتبط با این حساب
+        related_journal_entries = JournalEntry.objects.filter(
+            journalentryline__account__trading_account=trading_account
+        ).distinct()
+
+        # ۲. حذف تمام آرتیکل‌های این سندها
+        JournalEntryLine.objects.filter(journal_entry__in=related_journal_entries).delete()
+
+        # ۳. حذف خود سندهای حسابداری
+        related_journal_entries.delete()
+
+        # ۴. حذف دسته‌های خرید اسپات
         AssetLot.objects.filter(trading_account=trading_account).delete()
-        ClosedTradesLog.objects.filter(trading_account=trading_account).delete()
-        JournalEntry.objects.filter(posted_by=trading_account.user).delete() # This might be too broad, consider a more specific filter
+        
+        # ۵. حذف معاملات (جایگزین ClosedTradesLog)
+        Trade.objects.filter(trading_account=trading_account).delete()
+
+        # ۶. حذف سرفصل‌های حسابداری مختص این حساب
         ChartOfAccount.objects.filter(trading_account=trading_account).delete()
         
-        # Finally, delete the trading account itself
+        # ۷. در نهایت، حذف خود حساب معاملاتی
+        trading_account_name = trading_account.name
         trading_account.delete()
+        
+        print(f"Trading account '{trading_account_name}' and all its related data have been successfully deleted.")
 
 def make_deposit(trading_account, amount, description, user):
     """
@@ -387,44 +456,46 @@ def deposit_spot_asset(trading_account, asset, quantity, price_usd, description,
         if asset.asset_type != Asset.SPOT:
             raise ValueError("Asset must be of type SPOT for this operation.")
 
-        # Create an AssetLot for the deposited asset
+        # ۱. ایجاد AssetLot برای دارایی واریز شده (این بخش درست بود)
         AssetLot.objects.create(
             asset=asset,
             trading_account=trading_account,
             quantity=quantity,
-            purchase_price_usd=price_usd,
-            remaining_quantity=quantity # Initially, all quantity is remaining
+            purchase_price_usd=price_usd
         )
 
-        # Create journal entry for the cash equivalent of the deposit
         try:
-            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            equity_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='3010') # Or a specific asset deposit account
+            # ۲. پیدا کردن حساب‌های صحیح
+            # به جای حساب نقد، حساب نگهداری دارایی‌های اسپات را پیدا می‌کنیم
+            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
+            equity_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='3010')
 
             total_value = quantity * price_usd
 
+            # ۳. ایجاد سند حسابداری صحیح
             entry = JournalEntry.objects.create(
                 entry_date=timezone.now().date(),
-                description=f"Deposit of {quantity} {asset.symbol} at ${price_usd}/unit: {description}",
+                description=f"Deposit of {quantity} {asset.symbol}: {description}",
                 posted_by=user
             )
 
-            # Debit: Cash account increases (representing the value of the asset received)
+            # بدهکار: حساب نگهداری دارایی‌های اسپات افزایش می‌یابد
             JournalEntryLine.objects.create(
                 journal_entry=entry,
-                account=cash_account,
+                account=asset_holding_account,
                 debit_amount=total_value
             )
 
-            # Credit: Equity account increases
+            # بستانکار: سرمایه کاربر در سیستم افزایش می‌یابد
             JournalEntryLine.objects.create(
                 journal_entry=entry,
                 account=equity_account,
                 credit_amount=total_value
             )
             return entry
-        except ChartOfAccount.DoesNotExist:
-            raise ValueError(f"Required accounts are not set up for {trading_account.name}.")
+            
+        except ChartOfAccount.DoesNotExist as e:
+            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. جزئیات: {e}")
 
 def withdraw_spot_asset(trading_account, asset, quantity, price_usd, description, user):
     """
@@ -432,14 +503,13 @@ def withdraw_spot_asset(trading_account, asset, quantity, price_usd, description
     Reduces AssetLot quantities and updates the cash account.
     """
     with transaction.atomic():
-        if not isinstance(quantity, Decimal) or quantity <= 0:
-            raise ValueError("Quantity must be a positive Decimal.")
-        if not isinstance(price_usd, Decimal) or price_usd <= 0:
-            raise ValueError("Price USD must be a positive Decimal.")
         if asset.asset_type != Asset.SPOT:
             raise ValueError("Asset must be of type SPOT for this operation.")
+        
+        if quantity <= 0 or price_usd <= 0:
+            raise ValueError("مقدار و قیمت باید اعداد مثبت باشند.")
 
-        # Check if enough quantity is available across all lots
+        # ۲. بررسی موجودی کافی دارایی در تمام دسته‌های خرید (Lots)
         available_quantity = AssetLot.objects.filter(
             trading_account=trading_account,
             asset=asset,
@@ -447,54 +517,77 @@ def withdraw_spot_asset(trading_account, asset, quantity, price_usd, description
         ).aggregate(total=Sum('remaining_quantity'))['total'] or Decimal('0.00')
 
         if available_quantity < quantity:
-            raise ValueError(f"Insufficient quantity of {asset.symbol} for withdrawal. Available: {available_quantity}, Attempted: {quantity}")
+            raise ValueError(f"موجودی {asset.symbol} برای برداشت کافی نیست. موجودی: {available_quantity}، تلاش برای برداشت: {quantity}")
 
-        # Reduce quantity from AssetLots (FIFO - First In, First Out)
-        lots_to_deduct = AssetLot.objects.filter(
-            trading_account=trading_account,
-            asset=asset,
-            remaining_quantity__gt=0
-        ).order_by('purchase_date')
-
-        remaining_to_withdraw = quantity
-        for lot in lots_to_deduct:
-            if remaining_to_withdraw <= 0:
-                break
-            
-            deduct_from_lot = min(lot.remaining_quantity, remaining_to_withdraw)
-            lot.remaining_quantity -= deduct_from_lot
-            lot.save()
-            remaining_to_withdraw -= deduct_from_lot
-
-        # Create journal entry for the cash equivalent of the withdrawal
         try:
-            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            equity_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='3010') # Or a specific asset withdrawal account
+            # ۳. محاسبه هزینه تمام شده (COGS) دارایی‌های برداشتی
+            lots_to_withdraw_from = AssetLot.objects.filter(
+                trading_account=trading_account,
+                asset=asset,
+                remaining_quantity__gt=0
+            ).order_by('purchase_date')
 
-            total_value = quantity * price_usd
+            remaining_to_withdraw = quantity
+            cost_of_asset_withdrawn = Decimal('0.00')
 
+            for lot in lots_to_withdraw_from:
+                if remaining_to_withdraw <= 0:
+                    break
+                
+                withdraw_from_this_lot = min(lot.remaining_quantity, remaining_to_withdraw)
+                cost_of_asset_withdrawn += withdraw_from_this_lot * lot.purchase_price_usd
+                lot.remaining_quantity -= withdraw_from_this_lot
+                lot.save()
+                remaining_to_withdraw -= withdraw_from_this_lot
+
+            # ۴. محاسبه سود یا زیان شناسایی‌شده از این واگذاری
+            total_value_withdrawn = quantity * price_usd
+            realized_pnl = total_value_withdrawn - cost_of_asset_withdrawn
+            
+            # ۵. پیدا کردن یا ساختن حساب‌های لازم
+            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
+            equity_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='3010')
+            
+            if realized_pnl > 0:
+                parent_revenue_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='4000')
+                pnl_account, _ = ChartOfAccount.objects.get_or_create(
+                    trading_account=trading_account, account_number='4030', 
+                    defaults={'account_name': 'Realized Gain on Spot Sale', 'account_type': REVENUE, 'parent_account': parent_revenue_account}
+                )
+            elif realized_pnl < 0:
+                parent_expense_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='5000')
+                pnl_account, _ = ChartOfAccount.objects.get_or_create(
+                    trading_account=trading_account, account_number='5030', 
+                    defaults={'account_name': 'Realized Loss on Spot Sale', 'account_type': EXPENSE, 'parent_account': parent_expense_account}
+                )
+            else:
+                pnl_account = None
+
+            # ۶. ایجاد هدر سند حسابداری
             entry = JournalEntry.objects.create(
                 entry_date=timezone.now().date(),
-                description=f"Withdrawal of {quantity} {asset.symbol} at ${price_usd}/unit: {description}",
+                description=f"Withdrawal: {quantity} {asset.symbol} | PnL: {realized_pnl} | {description}",
                 posted_by=user
             )
 
-            # Credit: Cash account decreases
-            JournalEntryLine.objects.create(
-                journal_entry=entry,
-                account=cash_account,
-                credit_amount=total_value
-            )
-
-            # Debit: Equity account decreases
-            JournalEntryLine.objects.create(
-                journal_entry=entry,
-                account=equity_account,
-                debit_amount=total_value
-            )
+            # ۷. ثبت آرتیکل‌های سند حسابداری
+            # بدهکار: سرمایه کاربر به اندازه ارزش روز دارایی برداشت شده، کاهش می‌یابد
+            JournalEntryLine.objects.create(journal_entry=entry, account=equity_account, debit_amount=total_value_withdrawn)
+            
+            # بستانکار: دارایی از دفاتر با قیمت تمام شده اولیه خارج می‌شود
+            JournalEntryLine.objects.create(journal_entry=entry, account=asset_holding_account, credit_amount=cost_of_asset_withdrawn)
+            
+            # ثبت سود یا زیان شناسایی‌شده برای تراز کردن سند
+            if realized_pnl > 0:
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, credit_amount=realized_pnl)
+            elif realized_pnl < 0:
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, debit_amount=abs(realized_pnl))
+            
             return entry
-        except ChartOfAccount.DoesNotExist:
-            raise ValueError(f"Required accounts are not set up for {trading_account.name}.")
+
+        except ChartOfAccount.DoesNotExist as e:
+            raise ValueError(f"حسابداری برای {trading_account.name} به درستی تنظیم نشده است. جزئیات: {e}")
+        
 def execute_spot_buy(trading_account, asset, quantity: Decimal, trade_cost: Decimal, description: str, user):
     """
     منطق خرید یک دارایی اسپات را اجرا می‌کند.
@@ -576,19 +669,7 @@ def execute_spot_sell(trading_account, asset, quantity: Decimal, sale_proceeds: 
             raise ValueError(f"موجودی {asset.symbol} برای فروش کافی نیست. موجودی: {available_quantity}، تلاش برای فروش: {quantity}")
 
         try:
-            # ۳. پیدا کردن حساب‌های اصلی مورد نیاز
-            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
-            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
-            # حساب‌های سود و زیان فروش اسپات را در صورت عدم وجود، ایجاد می‌کنیم
-            # این حساب‌ها عمومی هستند و به حساب معاملاتی خاصی متصل نیستند
-            realized_gain_account, _ = ChartOfAccount.objects.get_or_create(
-                account_number='4030', defaults={'account_name': 'Realized Gain on Spot Sale', 'account_type': REVENUE}
-            )
-            realized_loss_account, _ = ChartOfAccount.objects.get_or_create(
-                account_number='5030', defaults={'account_name': 'Realized Loss on Spot Sale', 'account_type': EXPENSE}
-            )
-
-            # ۴. محاسبه هزینه تمام شده (COGS) و به‌روزرسانی دسته‌های خرید با منطق FIFO
+            # ۳. محاسبه هزینه تمام شده (COGS) قبل از هر تغییری در دیتابیس
             lots_to_sell_from = AssetLot.objects.filter(
                 trading_account=trading_account,
                 asset=asset,
@@ -608,8 +689,41 @@ def execute_spot_sell(trading_account, asset, quantity: Decimal, sale_proceeds: 
                 lot.save()
                 remaining_to_sell -= sell_from_this_lot
 
-            # ۵. محاسبه سود یا زیان شناسایی‌شده
+            # ۴. محاسبه سود یا زیان شناسایی‌شده
             realized_pnl = sale_proceeds - cost_of_goods_sold
+            
+            # ۵. پیدا کردن حساب‌های اصلی و ایجاد حساب‌های سود/زیان در صورت نیاز
+            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
+            asset_holding_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1020')
+
+            if realized_pnl > 0:
+                # پیدا کردن حساب مادر "درآمدها"
+                parent_revenue_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='4000')
+                # ساخت حساب سود به عنوان زیرمجموعه آن
+                pnl_account, _ = ChartOfAccount.objects.get_or_create(
+                    trading_account=trading_account,
+                    account_number='4030', 
+                    defaults={
+                        'account_name': 'Realized Gain on Spot Sale', 
+                        'account_type': REVENUE,
+                        'parent_account': parent_revenue_account
+                    }
+                )
+            elif realized_pnl < 0:
+                # پیدا کردن حساب مادر "هزینه‌ها"
+                parent_expense_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='5000')
+                # ساخت حساب زیان به عنوان زیرمجموعه آن
+                pnl_account, _ = ChartOfAccount.objects.get_or_create(
+                    trading_account=trading_account,
+                    account_number='5030', 
+                    defaults={
+                        'account_name': 'Realized Loss on Spot Sale', 
+                        'account_type': EXPENSE,
+                        'parent_account': parent_expense_account
+                    }
+                )
+            else:
+                pnl_account = None # برای معاملات سر به سر
 
             # ۶. ایجاد هدر سند حسابداری
             entry = JournalEntry.objects.create(
@@ -619,19 +733,13 @@ def execute_spot_sell(trading_account, asset, quantity: Decimal, sale_proceeds: 
             )
 
             # ۷. ثبت آرتیکل‌های سند حسابداری
-            # بدهکار: وجه نقد دریافت شده از فروش
             JournalEntryLine.objects.create(journal_entry=entry, account=cash_account, debit_amount=sale_proceeds)
-            
-            # بستانکار: حذف ارزش دفتری دارایی فروخته شده از دفاتر
             JournalEntryLine.objects.create(journal_entry=entry, account=asset_holding_account, credit_amount=cost_of_goods_sold)
             
-            # ثبت سود یا زیان
             if realized_pnl > 0:
-                # بستانکار: ثبت سود شناسایی‌شده در حساب درآمد
-                JournalEntryLine.objects.create(journal_entry=entry, account=realized_gain_account, credit_amount=realized_pnl)
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, credit_amount=realized_pnl)
             elif realized_pnl < 0:
-                # بدهکار: ثبت زیان شناسایی‌شده در حساب هزینه
-                JournalEntryLine.objects.create(journal_entry=entry, account=realized_loss_account, debit_amount=abs(realized_pnl))
+                JournalEntryLine.objects.create(journal_entry=entry, account=pnl_account, debit_amount=abs(realized_pnl))
             
             return entry
 

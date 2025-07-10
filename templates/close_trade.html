@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Close Trade" %} #{{ trade.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-times-circle"></i> {% trans "Close Trade" %} #{{ trade.id }}</h2>
+    <hr>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            {% trans "Open Trade Details" %}
+        </div>
+        <div class="card-body">
+            <p><strong>{% trans "Asset" %}:</strong> {{ trade.asset.symbol }}</p>
+            <p><strong>{% trans "Position Side" %}:</strong> {{ trade.get_position_side_display }}</p>
+            <p><strong>{% trans "Quantity" %}:</strong> {{ trade.quantity }}</p>
+            <p><strong>{% trans "Entry Price" %}:</strong> ${{ trade.entry_price|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-danger">{% trans "Confirm and Close Trade" %}</button>
+        <a href="{% url 'open_trades_list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+    </form>
+</div>
+{% endblock %}

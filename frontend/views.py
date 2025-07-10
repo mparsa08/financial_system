@@ -3,14 +3,38 @@ from django.db.models.aggregates import Sum
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, TemplateView, View, ListView, UpdateView, DeleteView, FormView
-from core.models import TradingAccount, Asset, JournalEntry,JournalEntryLine, ClosedTradesLog, ChartOfAccount, Currency,ASSET, LIABILITY, EQUITY,EXPENSE
-from core.services import make_deposit, make_withdrawal, execute_spot_buy, execute_spot_sell, create_trading_account, generate_income_statement, record_closed_trade, calculate_unrealized_pnl, transfer_funds_between_accounts
+from core.models import (
+    TradingAccount,
+    Asset,
+    JournalEntry,
+    JournalEntryLine,
+    Trade,
+    ChartOfAccount,
+    Currency,
+    AssetLot,
+    ASSET, LIABILITY, EQUITY, EXPENSE
+)
+from core.services import (
+    open_trade,
+    close_trade,
+    create_trading_account,
+    generate_income_statement,
+    make_deposit,
+    make_withdrawal,
+    deposit_spot_asset,
+    withdraw_spot_asset,
+    execute_spot_buy,
+    execute_spot_sell,
+    calculate_unrealized_pnl,
+    transfer_funds_between_accounts,
+    record_direct_closed_trade
+)
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from datetime import datetime
-from .forms import TradingAccountForm, ClosedTradeForm
+from .forms import OpenTradeForm, TradingAccountForm,CloseTradeForm,DirectClosedTradeForm
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -19,43 +43,142 @@ from django.utils import timezone
 User = get_user_model()
 
 
-class AddClosedTradeView(CreateView):
-    model = ClosedTradesLog
-    form_class = ClosedTradeForm
-    template_name = 'add_closed_trade.html'
-    success_url = reverse_lazy('dashboard') 
+class DirectClosedTradeView(LoginRequiredMixin, CreateView):
+    """
+    این ویو صفحه ثبت مستقیم یک معامله بسته شده را مدیریت می‌کند.
+    """
+    model = Trade
+    form_class = DirectClosedTradeForm
+    template_name = 'direct_add_trade.html' # یک تمپلیت جدید برای این فرم
+    success_url = reverse_lazy('transaction_history') # کاربر را به صفحه تاریخچه معاملات هدایت می‌کند
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        try:
+            # فراخوانی سرویس جدید
+            created_trade = record_direct_closed_trade(
+                trading_account=data['trading_account'],
+                asset=data['asset'],
+                position_side=data['position_side'],
+                quantity=data['quantity'],
+                entry_price=data['entry_price'],
+                exit_price=data['exit_price'],
+                exit_date=data['exit_date'],
+                gross_pnl=data['gross_profit_or_loss'],
+                broker_commission=data['broker_commission'],
+                trader_commission=data['trader_commission'],
+                commission_recipient=data['commission_recipient'],
+                exit_description="Directly recorded closed trade."
+            )
+
+            self.object = created_trade
+
+            messages.success(self.request, "معامله بسته شده با موفقیت ثبت شد.")
+        except ValueError as e:
+            messages.error(self.request, f"خطا در ثبت معامله: {e}")
+            return self.form_invalid(form)
+            
+        return HttpResponseRedirect(self.get_success_url())
+        
+class CloseTradeView(LoginRequiredMixin, FormView):
+    """
+    این ویو فرآیند بستن یک معامله باز را مدیریت می‌کند.
+    """
+    template_name = 'close_trade.html'
+    form_class = CloseTradeForm
+    success_url = reverse_lazy('open_trades_list')
+
+    def get_context_data(self, **kwargs):
+        # معامله‌ای که قرار است بسته شود را به تمپلیت ارسال می‌کنیم
+        context = super().get_context_data(**kwargs)
+        context['trade'] = get_object_or_404(Trade, pk=self.kwargs['pk'], trading_account__user=self.request.user)
+        return context
+
+    def form_valid(self, form):
+        trade_to_close = get_object_or_404(Trade, pk=self.kwargs['pk'])
+        data = form.cleaned_data
+        
+        try:
+            # فراخوانی سرویس بستن معامله
+            close_trade(
+                trade_to_close=trade_to_close,
+                gross_profit_or_loss=data['gross_profit_or_loss'],
+                broker_commission=data['broker_commission'],
+                trader_commission=data['trader_commission'],
+                commission_recipient=data['commission_recipient'],
+                exit_description=data['exit_description']
+            )
+            messages.success(self.request, f"معامله #{trade_to_close.id} با موفقیت بسته شد.")
+        except ValueError as e:
+            messages.error(self.request, f"خطا در بستن معامله: {e}")
+            return self.form_invalid(form)
+            
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class OpenTradesListView(LoginRequiredMixin, ListView):
+    """
+    This view displays a list of all open derivative trades for the logged-in user.
+    """
+    model = Trade
+    template_name = 'open_trades_list.html'  # The template that will display the list
+    context_object_name = 'open_trades'  # The name of the variable in the template
+
+    def get_queryset(self):
+        """
+        Override this method to filter trades for the current user and only show OPEN ones.
+        """
+        user_trading_accounts = TradingAccount.objects.filter(user=self.request.user)
+        return Trade.objects.filter(
+            trading_account__in=user_trading_accounts,
+            status=Trade.OPEN
+        ).order_by('-entry_date')
+
+class OpenTradeView(LoginRequiredMixin, CreateView):
+    """
+    این ویو صفحه باز کردن یک معامله مشتقه جدید را مدیریت می‌کند.
+    """
+    model = Trade
+    form_class = OpenTradeForm
+    template_name = 'add_trade.html' # می‌توانید از همان تمپلیت قبلی استفاده کنید
+    success_url = reverse_lazy('open_trades_list') # کاربر را به لیست معاملات باز هدایت می‌کند
+
+    def get_form_kwargs(self):
+        """
+        کاربر لاگین کرده را به فرم پاس می‌دهد تا دراپ‌داون‌ها فیلتر شوند.
+        """
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         """
-        این نسخه اصلاح شده، آبجکت ساخته شده توسط سرویس را دریافت کرده
-        و آن را به ویو معرفی می‌کند تا فرآیند به درستی تکمیل شود.
+        این متد بازنویسی شده تا تابع سرویس 'open_trade' را فراخوانی کند.
         """
-        data = form.cleaned_data
         try:
-            # --- شروع تغییر ---
-            # آبجکت trade را که از سرویس برمی‌گردد، در یک متغیر ذخیره می‌کنیم
-            created_trade = record_closed_trade(
+            data = form.cleaned_data
+            
+            # 🚀 فراخوانی سرویس برای باز کردن معامله 🚀
+            self.object = open_trade(
                 trading_account=data['trading_account'],
                 asset=data['asset'],
-                trade_date=data['trade_date'],
-                net_profit_or_loss=data['net_profit_or_loss'],
-                broker_commission=data['broker_commission'],
-                trader_commission=data['trader_commission'],
-                commission_recipient=data['commission_recipient']
+                side=data['position_side'],
+                quantity=data['quantity'],
+                entry_price=data['entry_price']
             )
-            # این خط حیاتی است: آبجکت ساخته شده را به ویو معرفی می‌کنیم
-            self.object = created_trade
-            # --- پایان تغییر ---
-
-            messages.success(self.request, "معامله با موفقیت ثبت و سند حسابداری آن صادر شد.")
+            
+            messages.success(self.request, f"معامله {self.object.asset.symbol} با موفقیت باز شد.")
 
         except ValueError as e:
             form.add_error(None, str(e))
             return self.form_invalid(form)
             
-        # حالا که self.object مقدار دارد، این خط به درستی کار می‌کند
         return HttpResponseRedirect(self.get_success_url())
-
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
@@ -289,14 +412,19 @@ class HistoryView(LoginRequiredMixin, TemplateView):
 
         # Fetch Journal Entries related to the user's trading accounts
         user_trading_accounts = TradingAccount.objects.filter(user=user)
+        
+        # Get the ChartOfAccount instances linked to these trading accounts
+        user_chart_of_accounts = ChartOfAccount.objects.filter(trading_account__in=user_trading_accounts)
+
+        # Get the journal entries from these accounts
         context['journal_entries'] = JournalEntry.objects.filter(
-            posted_by=user
-        ).order_by('-entry_date').prefetch_related('journalentryline_set__account')
+            journalentryline__account__in=user_chart_of_accounts
+        ).distinct().order_by('-entry_date', '-id').prefetch_related('journalentryline_set__account')
         
         # Fetch Closed Trades related to the user's trading accounts
-        context['closed_trades'] = ClosedTradesLog.objects.filter(
+        context['all_trades'] = Trade.objects.filter(
             trading_account__in=user_trading_accounts
-        ).order_by('-trade_date').select_related('asset', 'trading_account')
+        ).order_by('-entry_date').select_related('asset', 'trading_account')
 
         context['title'] = 'Transaction History'
         return context
@@ -620,7 +748,105 @@ class BalanceSheetView(LoginRequiredMixin, TemplateView):
 
         return context
 
+from django.core.serializers.json import DjangoJSONEncoder
+import json
+
+class TrialBalanceView(LoginRequiredMixin, TemplateView):
+    template_name = 'trial_balance.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        trading_accounts = TradingAccount.objects.filter(user=user)
+        context['trading_accounts'] = trading_accounts
+
+        selected_account_id = self.request.GET.get('trading_account_id')
+        if selected_account_id:
+            selected_account = get_object_or_404(TradingAccount, id=selected_account_id, user=user)
+            context['selected_account'] = selected_account
+
+            accounts = ChartOfAccount.objects.filter(trading_account=selected_account).prefetch_related('journalentryline_set__journal_entry')
+            
+            account_details = {}
+            for acc in accounts:
+                lines = acc.journalentryline_set.all()
+                total_debit = lines.aggregate(Sum('debit_amount'))['debit_amount__sum'] or 0
+                total_credit = lines.aggregate(Sum('credit_amount'))['credit_amount__sum'] or 0
+                
+                balance = 0
+                if acc.account_type in [ASSET, EXPENSE]:
+                    balance = total_debit - total_credit
+                else: # LIABILITY, EQUITY, REVENUE
+                    balance = total_credit - total_debit
+
+                # Serialize the lines into a list of dictionaries
+                lines_data = []
+                for line in lines:
+                    lines_data.append({
+                        'date': line.journal_entry.entry_date.strftime('%Y-%m-%d'),
+                        'description': line.journal_entry.description,
+                        'debit': str(line.debit_amount),
+                        'credit': str(line.credit_amount)
+                    })
+
+                account_details[acc.id] = {
+                    'object': acc,
+                    'debit': total_debit,
+                    'credit': total_credit,
+                    'balance': balance,
+                    'lines_json': json.dumps(lines_data, cls=DjangoJSONEncoder), # Pass a JSON string
+                    'children': []
+                }
+
+            # Build the hierarchy
+            root_accounts = []
+            for acc_id, details in account_details.items():
+                parent_id = details['object'].parent_account_id
+                if parent_id in account_details:
+                    account_details[parent_id]['children'].append(details)
+                else:
+                    root_accounts.append(details)
+
+            context['root_accounts'] = root_accounts
+
+        return context
+
 class ChartOfAccountDeleteView(DeleteView):
     model = ChartOfAccount
     template_name = 'chartofaccount_confirm_delete.html'
     success_url = reverse_lazy('chartofaccount_list')
+
+class SpotAssetListView(LoginRequiredMixin, TemplateView):
+    template_name = 'spot_asset_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        
+        # Get all asset lots for the user, grouped by trading account
+        asset_lots = AssetLot.objects.filter(trading_account__user=user).select_related('asset', 'trading_account')
+
+        # Process the lots to group them by asset
+        spot_assets = {}
+        for lot in asset_lots:
+            if lot.asset.symbol not in spot_assets:
+                spot_assets[lot.asset.symbol] = {
+                    'name': lot.asset.name,
+                    'lots': [],
+                    'total_quantity': 0,
+                    'total_cost': 0,
+                }
+            
+            spot_assets[lot.asset.symbol]['lots'].append(lot)
+            spot_assets[lot.asset.symbol]['total_quantity'] += lot.remaining_quantity
+            spot_assets[lot.asset.symbol]['total_cost'] += lot.remaining_quantity * lot.purchase_price_usd
+
+        # Calculate the weighted average price for each asset
+        for symbol, data in spot_assets.items():
+            if data['total_quantity'] > 0:
+                data['average_price'] = data['total_cost'] / data['total_quantity']
+            else:
+                data['average_price'] = 0
+
+        context['spot_assets'] = spot_assets
+        return context

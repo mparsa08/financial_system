@@ -1,12 +1,13 @@
+from core.views import journal_entry_delete, trade_delete
 from django.urls import path
 from .views import (
-    DashboardView, DepositSpotAssetView, DepositView, WithdrawSpotAssetView, WithdrawView, TradeView, TradeBuyView, TradeSellView, 
+    CloseTradeView, DashboardView, DepositSpotAssetView, DepositView, DirectClosedTradeView, OpenTradeView, SpotAssetListView, WithdrawSpotAssetView, WithdrawView, TradeView, TradeBuyView, TradeSellView, 
     HistoryView, LoginView, logout_view, CreateTradingAccountView, ChartOfAccountsView, 
     IncomeStatementView, DeleteTradingAccountView, CalculateUnrealizedPnLView, 
     TransferFundsView, CurrencyListView, CurrencyCreateView, CurrencyUpdateView, 
     CurrencyDeleteView, AssetListView, AssetCreateView, AssetUpdateView, AssetDeleteView,
     ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView, 
-    ChartOfAccountDeleteView, AddClosedTradeView, BalanceSheetView, FundManagementView
+    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView
 )
 
 urlpatterns = [
@@ -40,6 +41,13 @@ urlpatterns = [
     path('chart-of-accounts/add/', ChartOfAccountCreateView.as_view(), name='chartofaccount_add'),
     path('chart-of-accounts/<int:pk>/edit/', ChartOfAccountUpdateView.as_view(), name='chartofaccount_edit'),
     path('chart-of-accounts/<int:pk>/delete/', ChartOfAccountDeleteView.as_view(), name='chartofaccount_delete'),
-    path('trade/add-closed-trade/', AddClosedTradeView.as_view(), name='add_closed_trade'),
+    path('trades/open/', OpenTradeView.as_view(), name='open_trade'),
+    path('trades/open-list/', OpenTradesListView.as_view(), name='open_trades_list'),
+     path('trades/<int:pk>/close/', CloseTradeView.as_view(), name='close_trade'),
+    path('trades/record-closed/', DirectClosedTradeView.as_view(), name='record_direct_closed_trade'),
     path('balance-sheet/', BalanceSheetView.as_view(), name='balance_sheet'),
+    path('trial-balance/', TrialBalanceView.as_view(), name='trial_balance'),
+    path('spot-assets/', SpotAssetListView.as_view(), name='spot_asset_list'),
+    path('journal-entry/<int:pk>/delete/', journal_entry_delete, name='journal_entry_delete'),
+    path('trade/<int:pk>/delete/', trade_delete, name='trade_delete'),
 ]

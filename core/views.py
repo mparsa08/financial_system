@@ -1,9 +1,11 @@
 # --- Imports from Django ---
+from django.shortcuts import get_object_or_404, redirect
 from datetime import datetime
 import decimal
 from django.db import transaction
 from django.utils import timezone
 from django.views.generic import TemplateView
+import re
 
 
 # --- Imports from Django REST Framework ---
@@ -21,10 +23,10 @@ from .models import (
     JournalEntryLine, 
     TradingAccount, 
     Asset, 
-    ClosedTradesLog
+    Trade
 )
 from .serializers import *
-from .services import generate_income_statement, make_deposit, make_withdrawal, deposit_spot_asset, withdraw_spot_asset, execute_spot_buy, execute_spot_sell, record_closed_trade
+from .services import Decimal, close_trade, generate_income_statement, make_deposit, make_withdrawal, deposit_spot_asset, open_trade, withdraw_spot_asset, execute_spot_buy, execute_spot_sell
 from .permissions import IsAdminUser, IsAccountantUser, IsTraderUser
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -293,60 +295,78 @@ class AssetLotViewSet(viewsets.ModelViewSet):
             return AssetLot.objects.all()
         return AssetLot.objects.filter(trading_account__user=self.request.user)
 
-class ClosedTradesLogViewSet(viewsets.ModelViewSet):
-    queryset = ClosedTradesLog.objects.all()
-    serializer_class = ClosedTradesLogSerializer
+
+class TradeViewSet(viewsets.ModelViewSet):
+    """
+    این ViewSet تمام عملیات مربوط به معاملات (باز کردن، بستن، مشاهده) را مدیریت می‌کند.
+    """
+    queryset = Trade.objects.all().order_by('-entry_date')
+    serializer_class = TradeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        """
+        فقط معاملاتی را نشان می‌دهد که به کاربر لاگین کرده تعلق دارند.
+        ادمین همه معاملات را می‌بیند.
+        """
         if self.request.user.role == 'Admin':
-            return ClosedTradesLog.objects.all()
-        return ClosedTradesLog.objects.filter(trading_account__user=self.request.user)
+            return Trade.objects.all().order_by('-entry_date')
+        return Trade.objects.filter(trading_account__user=self.request.user).order_by('-entry_date')
 
-    def create(self, request, *args, **kwargs):
-        with transaction.atomic():
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
+    def perform_create(self, serializer):
+        """
+        این متد بازنویسی شده تا به جای ذخیره مستقیم، تابع سرویس 'open_trade' را فراخوانی کند.
+        این متد مسئول باز کردن یک معامله جدید است.
+        """
+        data = serializer.validated_data
+        open_trade(
+            trading_account=data['trading_account'],
+            asset=data['asset'],
+            side=data['position_side'],
+            quantity=data['quantity'],
+            entry_price=data['entry_price']
+        )
 
-            # Extract data for the service function
-            trading_account_id = serializer.validated_data.get('trading_account').id
-            asset_id = serializer.validated_data.get('asset').id
-            trade_date = serializer.validated_data.get('trade_date')
-            net_profit_or_loss = serializer.validated_data.get('net_profit_or_loss')
-            broker_commission = serializer.validated_data.get('broker_commission')
-            trader_commission = serializer.validated_data.get('trader_commission')
-            commission_recipient_id = serializer.validated_data.get('commission_recipient').id if serializer.validated_data.get('commission_recipient') else None
+    @action(detail=True, methods=['post'])
+    def close(self, request, pk=None):
+        """
+        یک اکشن سفارشی برای بستن یک معامله باز.
+        URL: POST /api/v1/trades/{id}/close/
+        """
+        # معامله‌ای که قرار است بسته شود را پیدا می‌کنیم
+        trade_to_close = self.get_object()
+        
+        # داده‌های لازم برای بستن معامله را از بدنه درخواست می‌خوانیم
+        exit_price = request.data.get('exit_price')
+        broker_commission = request.data.get('broker_commission')
+        trader_commission = request.data.get('trader_commission')
+        commission_recipient_id = request.data.get('commission_recipient')
 
-            try:
-                # Fetch related objects
-                trading_account = TradingAccount.objects.get(id=trading_account_id)
-                asset = Asset.objects.get(id=asset_id)
-                commission_recipient = User.objects.get(id=commission_recipient_id) if commission_recipient_id else None
+        # اعتبارسنجی ورودی‌ها
+        if not all([exit_price, broker_commission, trader_commission, commission_recipient_id]):
+            return Response(
+                {"error": "exit_price, broker_commission, trader_commission, and commission_recipient are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            recipient = User.objects.get(id=commission_recipient_id)
+            # فراخوانی سرویس بستن معامله
+            closed_trade = close_trade(
+                trade_to_close=trade_to_close,
+                exit_price=Decimal(exit_price),
+                broker_commission=Decimal(broker_commission),
+                trader_commission=Decimal(trader_commission),
+                commission_recipient=recipient
+            )
+            # نمایش معامله به‌روز شده به کاربر
+            serializer = self.get_serializer(closed_trade)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-                # Call the service function
-                record_closed_trade(
-                    trading_account=trading_account,
-                    asset=asset,
-                    trade_date=trade_date,
-                    net_profit_or_loss=net_profit_or_loss,
-                    broker_commission=broker_commission,
-                    trader_commission=trader_commission,
-                    commission_recipient=commission_recipient
-                )
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except TradingAccount.DoesNotExist:
-                return Response({"error": "Trading account not found."}, status=status.HTTP_404_NOT_FOUND)
-            except Asset.DoesNotExist:
-                return Response({"error": "Asset not found."}, status=status.HTTP_404_NOT_FOUND)
-            except User.DoesNotExist:
-                return Response({"error": "Commission recipient user not found."}, status=status.HTTP_404_NOT_FOUND)
-            except ValueError as e:
-                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
-                return Response({"error": f"An unexpected error occurred: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
+        except User.DoesNotExist:
+            return Response({"error": "Commission recipient user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 class DashboardView(TemplateView):
     template_name = 'index.html'
 
@@ -355,3 +375,96 @@ class DashboardView(TemplateView):
         if self.request.user.is_authenticated:
             context['trading_accounts'] = TradingAccount.objects.filter(user=self.request.user)
         return context
+
+import re
+from django.db import transaction
+
+from decimal import Decimal
+
+from django.contrib import messages
+from decimal import Decimal, InvalidOperation
+
+def journal_entry_delete(request, pk):
+    journal_entry = get_object_or_404(JournalEntry, pk=pk)
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Check for Futures Trade by description
+            trade_id_match = re.search(r'Trade #(\d+)', journal_entry.description)
+            
+            # Check for Spot Asset purchase by looking at the accounts involved
+            is_spot_buy = journal_entry.journalentryline_set.filter(account__account_number='1020', debit_amount__gt=0).exists()
+
+            if trade_id_match:
+                # --- Handle Futures Trade Deletion ---
+                trade_id = int(trade_id_match.group(1))
+                try:
+                    trade_to_delete = Trade.objects.get(id=trade_id)
+                    related_journal_entries = JournalEntry.objects.filter(description__contains=f'Trade #{trade_id}')
+                    related_journal_entries.delete()
+                    trade_to_delete.delete()
+                    messages.success(request, f"Successfully deleted trade #{trade_id} and its associated journal entries.")
+                except Trade.DoesNotExist:
+                    journal_entry.delete() # Orphaned entry, just delete it
+
+            elif is_spot_buy:
+                # --- Handle Spot Asset Purchase Deletion (New, Safer Logic) ---
+                spot_buy_match = re.search(r'Spot Buy: ([\d.]+) (\w+)', journal_entry.description)
+                lot_deleted = False
+                if spot_buy_match:
+                    try:
+                        quantity = Decimal(spot_buy_match.group(1))
+                        asset_symbol = spot_buy_match.group(2)
+                        
+                        asset_holding_line = journal_entry.journalentryline_set.filter(account__account_number='1020').first()
+
+                        if asset_holding_line and quantity > 0:
+                            trade_cost = asset_holding_line.debit_amount
+                            trading_account = asset_holding_line.account.trading_account
+                            purchase_price = trade_cost / quantity
+
+                            # Build a highly precise filter
+                            matching_lots = AssetLot.objects.filter(
+                                trading_account=trading_account,
+                                asset__symbol=asset_symbol,
+                                quantity=quantity,
+                                purchase_price_usd=purchase_price,
+                                purchase_date__date=journal_entry.entry_date
+                            )
+
+                            # --- SAFETY CHECK --- #
+                            if matching_lots.count() == 1:
+                                matching_lots.first().delete()
+                                lot_deleted = True
+                            else:
+                                # If we find 0 or more than 1, we have an ambiguity.
+                                messages.warning(request, f"Could not uniquely identify the asset lot for journal entry #{journal_entry.id}. The journal entry was deleted, but the asset lot requires manual review.")
+
+                    except (InvalidOperation, IndexError):
+                        messages.error(request, f"Could not parse details from journal entry #{journal_entry.id} description.")
+                
+                journal_entry.delete()
+                if lot_deleted:
+                    messages.success(request, f"Journal entry #{journal_entry.id} and its associated asset lot were successfully deleted.")
+                else:
+                    messages.info(request, f"Journal entry #{journal_entry.id} was deleted.")
+
+            else:
+                # --- Handle all other Journal Entries ---
+                journal_entry.delete()
+                messages.success(request, f"Journal entry #{journal_entry.id} has been deleted.")
+                
+        return redirect('transaction_history')
+    return redirect('transaction_history')
+
+def trade_delete(request, pk):
+    trade = get_object_or_404(Trade, pk=pk)
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Find journal entries related to this trade by looking for a unique identifier in the description
+            journal_entries = JournalEntry.objects.filter(description__contains=f'Trade #{trade.id}')
+            # Delete all related journal entries
+            journal_entries.delete()
+            # Delete the trade itself
+            trade.delete()
+        return redirect('transaction_history')
+    return redirect('transaction_history')

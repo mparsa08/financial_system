@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Currency, ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, Asset, AssetLot, ClosedTradesLog
+from .models import User, Currency, ChartOfAccount, JournalEntry, JournalEntryLine, TradingAccount, Asset, AssetLot, Trade
 from django.db.models import Sum
 
 
@@ -61,24 +61,25 @@ class AssetLotSerializer(serializers.ModelSerializer):
         # در صورت موفقیت‌آمیز بودن تمام اعتبارسنجی‌ها، حتماً داده‌ها را برگردان
         return data
 
-class ClosedTradesLogSerializer(serializers.ModelSerializer):
+class TradeSerializer(serializers.ModelSerializer):
+    """
+    سریالایزر برای مدل یکپارچه Trade.
+    هم برای نمایش و هم برای ایجاد (باز کردن) معاملات استفاده می‌شود.
+    """
+    # نمایش اطلاعات مربوط به آبجکت‌های متصل برای خوانایی بهتر در API
+    asset_details = serializers.StringRelatedField(source='asset', read_only=True)
+    trading_account_details = serializers.StringRelatedField(source='trading_account', read_only=True)
+
     class Meta:
-        model = ClosedTradesLog
+        model = Trade
+        # تمام فیلدها را در بر می‌گیرد
         fields = '__all__'
-
-    def validate(self, data):
-        """
-        بررسی می‌کند که دارایی ثبت شده برای لاگ معامله، حتما از نوع مشتقه باشد.
-        """
-        asset = data.get('asset')
-
-        # اگر دارایی انتخاب شده بود و نوع آن DERIVATIVE نبود، خطا ایجاد کن
-        if asset and asset.asset_type != Asset.DERIVATIVE:
-            raise serializers.ValidationError({
-                "asset": "این دارایی از نوع DERIVATIVE نیست و فقط معاملات مشتقه می‌توانند در این بخش ثبت شوند."
-            })
-            
-        return data
+        # فیلدهایی که هنگام باز کردن معامله نیازی به ارسال آنها نیست
+        # این فیلدها هنگام بستن معامله پر می‌شوند
+        read_only_fields = (
+            'status', 'exit_price', 'exit_date', 'gross_profit_or_loss',
+            'broker_commission', 'trader_commission', 'commission_recipient'
+        )
 
 
 # یک سریالایزر ساده برای نمایش موجودی کیف پول اسپات

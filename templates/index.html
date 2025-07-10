@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -8,12 +9,12 @@
         <div class="col-12">
             <div class="card border-primary">
                 <div class="card-body">
-                    <h4 class="card-title"><i class="bi bi-speedometer2"></i> Quick Actions</h4>
-                    <p class="card-text">Perform common actions quickly.</p>
-                    <a href="{% url 'deposit_funds' %}" class="btn btn-success"><i class="bi bi-box-arrow-in-down"></i> Deposit</a>
-                    <a href="{% url 'withdraw_funds' %}" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> Withdraw</a>
-                    <a href="{% url 'trade_assets' %}" class="btn btn-info"><i class="bi bi-graph-up-arrow"></i> New Trade</a>
-                    <a href="{% url 'transfer_funds' %}" class="btn btn-secondary"><i class="bi bi-arrow-left-right"></i> Transfer Funds</a>
+                    <h4 class="card-title"><i class="bi bi-speedometer2"></i> {% trans "Quick Actions" %}</h4>
+                    <p class="card-text">{% trans "Perform common actions quickly." %}</p>
+                    <a href="{% url 'deposit_funds' %}" class="btn btn-success"><i class="bi bi-box-arrow-in-down"></i> {% trans "Deposit" %}</a>
+                    <a href="{% url 'withdraw_funds' %}" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> {% trans "Withdraw" %}</a>
+                    <a href="{% url 'trade_assets' %}" class="btn btn-info"><i class="bi bi-graph-up-arrow"></i> {% trans "New Trade" %}</a>
+                    <a href="{% url 'transfer_funds' %}" class="btn btn-secondary"><i class="bi bi-arrow-left-right"></i> {% trans "Transfer Funds" %}</a>
                 </div>
             </div>
         </div>
@@ -23,7 +24,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <i class="bi bi-briefcase-fill"></i> Trading Account Summary
+                    <i class="bi bi-briefcase-fill"></i> {% trans "Trading Account Summary" %}
                 </div>
                 <div class="card-body">
                     {% if trading_accounts %}
@@ -34,14 +35,14 @@
                                         <h6 class="mb-0">{{ account.name }}</h6>
                                         <small class="text-muted">{{ account.get_account_type_display }} - {{ account.get_account_purpose_display }}</small>
                                     </div>
-                                    <a href="{% url 'delete_trading_account' account.id %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</a>
+                                    <a href="{% url 'delete_trading_account' account.id %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> {% trans "Delete" %}</a>
                                 </li>
                             {% endfor %}
                         </ul>
                     {% else %}
                         <div class="text-center p-3">
-                            <p>No trading accounts found.</p>
-                            <a href="{% url 'create_trading_account' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Create One Now</a>
+                            <p>{% trans "No trading accounts found." %}</p>
+                            <a href="{% url 'create_trading_account' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {% trans "Create One Now" %}</a>
                         </div>
                     {% endif %}
                 </div>
@@ -50,7 +51,7 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <i class="bi bi-clock-history"></i> Recent Activity
+                    <i class="bi bi-clock-history"></i> {% trans "Recent Activity" %}
                 </div>
                 <div class="card-body">
                                         {% if recent_transactions %}
@@ -64,19 +65,19 @@
                                     <p class="mb-1 text-muted">{{ line.account.account_name }}</p>
                                     <small class="{% if line.debit_amount > 0 %}text-danger{% else %}text-success{% endif %}">
                                         {% if line.debit_amount > 0 %}
-                                            <i class="bi bi-arrow-up-right"></i> Debit: {{ line.debit_amount }}
+                                            <i class="bi bi-arrow-up-right"></i> {% trans "Debit" %}: {{ line.debit_amount }}
                                         {% else %}
-                                            <i class="bi bi-arrow-down-left"></i> Credit: {{ line.credit_amount }}
+                                            <i class="bi bi-arrow-down-left"></i> {% trans "Credit" %}: {{ line.credit_amount }}
                                         {% endif %}
                                     </small>
                                 </li>
                             {% endfor %}
                         </ul>
                         <div class="card-footer text-center">
-                            <a href="{% url 'transaction_history' %}">View all transactions</a>
+                            <a href="{% url 'transaction_history' %}">{% trans "View all transactions" %}</a>
                         </div>
                     {% else %}
-                        <p class="card-text text-muted">No recent transactions found.</p>
+                        <p class="card-text text-muted">{% trans "No recent transactions found." %}</p>
                     {% endif %}
                 </div>
             </div>

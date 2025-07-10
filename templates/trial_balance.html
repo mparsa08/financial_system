@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Trial Balance" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-journal-check"></i> {% trans "Trial Balance" %}</h2>
+
+    <form method="get" class="mb-4">
+        <div class="row">
+            <div class="col-md-4">
+                <select name="trading_account_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">{% trans "Select a Trading Account" %}</option>
+                    {% for acc in trading_accounts %}
+                        <option value="{{ acc.id }}" {% if selected_account.id == acc.id %}selected{% endif %}>{{ acc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+
+    {% if selected_account %}
+        <div class="card">
+            <div class="card-header">
+                <h4>{% trans "Trial Balance for" %} {{ selected_account.name }}</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% trans "Account" %}</th>
+                                <th class="text-end">{% trans "Debit" %}</th>
+                                <th class="text-end">{% trans "Credit" %}</th>
+                                <th class="text-end">{% trans "Balance" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for account in root_accounts %}
+                                {% include "includes/account_row.html" with account=account level=0 %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">{% trans "Please select a trading account to view the trial balance." %}</div>
+    {% endif %}
+</div>
+
+<!-- Modal for Transaction Details -->
+<div class="modal fade" id="transactionModal" tabindex="-1" aria-labelledby="transactionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transactionModalLabel">{% trans "Transactions for Account" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% trans "Date" %}</th>
+                        <th>{% trans "Description" %}</th>
+                        <th class="text-end">{% trans "Debit" %}</th>
+                        <th class="text-end">{% trans "Credit" %}</th>
+                    </tr>
+                </thead>
+                <tbody id="transaction-lines">
+                    <!-- Lines will be injected here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const transactionModal = new bootstrap.Modal(document.getElementById('transactionModal'));
+    const transactionModalLabel = document.getElementById('transactionModalLabel');
+    const transactionLinesTbody = document.getElementById('transaction-lines');
+
+    document.querySelectorAll('.account-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const accountName = this.dataset.accountName;
+            const linesJson = this.dataset.lines;
+            
+            if (linesJson) {
+                const lines = JSON.parse(linesJson);
+                transactionModalLabel.textContent = `Transactions for ${accountName}`;
+                transactionLinesTbody.innerHTML = ''; // Clear previous lines
+
+                if (lines.length > 0) {
+                    lines.forEach(line => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${line.date}</td>
+                            <td>${line.description}</td>
+                            <td class="text-end">${line.debit}</td>
+                            <td class="text-end">${line.credit}</td>
+                        `;
+                        transactionLinesTbody.appendChild(tr);
+                    });
+                } else {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td colspan="4" class="text-center text-muted">No transactions for this account.</td>`;
+                    transactionLinesTbody.appendChild(tr);
+                }
+
+                transactionModal.show();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
