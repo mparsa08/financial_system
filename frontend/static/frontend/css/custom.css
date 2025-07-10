@@ -1,37 +1,38 @@
 /* Custom CSS for Financial System */
 
 body {
-    background-color: #f8f9fa; /* A light grey background for a cleaner look */
+  background-color: #f8f9fa; /* A light grey background for a cleaner look */
 }
 
 .container {
-    max-width: 1200px; /* A wider container for larger screens */
+  max-width: 1200px; /* A wider container for larger screens */
 }
 
 .card {
-    margin-bottom: 1.5rem;
-    border: none; /* Remove default border */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Add a subtle shadow */
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  margin-bottom: 1.5rem;
+  border: none; /* Remove default border */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); /* Add a subtle shadow */
+  transition:
+    transform 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
 }
 
 .card:hover {
-    transform: translateY(-5px); /* Lift card on hover */
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1); /* Enhance shadow on hover */
+  transform: translateY(-5px); /* Lift card on hover */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* Enhance shadow on hover */
 }
 
 .card-header {
-    background-color: #ffffff;
-    border-bottom: 1px solid #e9ecef;
-    font-weight: 600;
-    color: #495057;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 600;
+  color: #495057;
 }
 
 .btn {
-    transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
 }
 
 .btn:hover {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
-
