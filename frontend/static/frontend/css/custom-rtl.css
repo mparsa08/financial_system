@@ -1,5 +1,39 @@
 /* RTL specific custom styles */
 
+codex/add-persian-web-font-and-styles
+/* Persian font */
+body {
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+/* Color theme overrides */
+:root {
+    --rtl-primary: #0f4c81;
+    --rtl-secondary: #f0f4f8;
+    --rtl-accent: #d62828;
+}
+
+.navbar.bg-primary {
+    background-color: var(--rtl-primary) !important;
+}
+
+body {
+    background-color: var(--rtl-secondary);
+}
+
+.btn-primary {
+    background-color: var(--rtl-primary);
+    border-color: var(--rtl-primary);
+}
+
+.alert-danger {
+    background-color: var(--rtl-accent);
+    border-color: var(--rtl-accent);
+=======
 /*
    All rules in this file are scoped to pages where the HTML
    element has dir="rtl". This avoids interfering with the
@@ -44,4 +78,5 @@ html[dir="rtl"] .alert {
 }
 html[dir="rtl"] .alert .btn-close {
     float: left;
+dev
 }
