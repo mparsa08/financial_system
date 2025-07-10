@@ -4,6 +4,7 @@ from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _, get_language
 
 
 
@@ -49,6 +50,7 @@ class ChartOfAccount(models.Model):
 
     account_number = models.CharField(max_length=50)
     account_name = models.CharField(max_length=255)
+    account_name_fa = models.CharField(_('Persian Account Name'), max_length=255, blank=True, null=True)
     account_type = models.CharField(max_length=50, choices=ACCOUNT_TYPES)
     parent_account = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL)
     is_active = models.BooleanField(default=True)
@@ -70,6 +72,11 @@ class ChartOfAccount(models.Model):
         related_name='gl_accounts',
         help_text="Connects this account to a specific user as a counterparty"
     )
+    @property
+    def display_name(self):
+        if get_language() == "fa" and self.account_name_fa:
+            return self.account_name_fa
+        return self.account_name
 
     def __str__(self):
         # نام را کمی بهتر می‌کنیم تا مشخص باشد برای کدام حساب معاملاتی است

@@ -9,7 +9,7 @@
             <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Confirm Deletion</h5>
         </div>
         <div class="card-body">
-            <p class="card-text">Are you sure you want to delete the account: <strong>{{ object.account_name }} ({{ object.account_number }})</strong>?</p>
+            <p class="card-text">Are you sure you want to delete the account: <strong>{{ object.display_name }} ({{ object.account_number }})</strong>?</p>
             <p class="text-danger">This action cannot be undone.</p>
             <form method="post">
                 {% csrf_token %}

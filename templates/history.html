@@ -64,7 +64,7 @@
                                                     <tbody>
                                                         {% for line in entry.journalentryline_set.all %}
                                                         <tr>
-                                                            <td>{{ line.account.account_name }}</td>
+                                                            <td>{{ line.account.display_name }}</td>
                                                             <td class="text-end">{{ line.debit_amount }}</td>
                                                             <td class="text-end">{{ line.credit_amount }}</td>
                                                         </tr>

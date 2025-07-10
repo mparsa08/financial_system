@@ -661,13 +661,13 @@ class ChartOfAccountListView(ListView):
 class ChartOfAccountCreateView(CreateView):
     model = ChartOfAccount
     template_name = 'chartofaccount_form.html'
-    fields = ['account_number', 'account_name', 'account_type', 'parent_account', 'is_active', 'trading_account']
+    fields = ['account_number', 'account_name', 'account_name_fa', 'account_type', 'parent_account', 'is_active', 'trading_account']
     success_url = reverse_lazy('chartofaccount_list')
 
 class ChartOfAccountUpdateView(UpdateView):
     model = ChartOfAccount
     template_name = 'chartofaccount_form.html'
-    fields = ['account_number', 'account_name', 'account_type', 'parent_account', 'is_active', 'trading_account']
+    fields = ['account_number', 'account_name', 'account_name_fa', 'account_type', 'parent_account', 'is_active', 'trading_account']
     success_url = reverse_lazy('chartofaccount_list')
 
 

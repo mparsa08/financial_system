@@ -41,7 +41,7 @@
                         <ul class="list-group list-group-flush">
                             {% for account in asset_accounts %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ account.account_name }}
+                                {{ account.display_name }}
                                 <span class="badge bg-primary rounded-pill">{{ account.balance|floatformat:2 }}</span>
                             </li>
                             {% empty %}
@@ -62,7 +62,7 @@
                         <ul class="list-group list-group-flush">
                             {% for account in liability_accounts %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ account.account_name }}
+                                {{ account.display_name }}
                                 <span class="badge bg-primary rounded-pill">{{ account.balance|floatformat:2 }}</span>
                             </li>
                             {% empty %}
@@ -80,7 +80,7 @@
                         <ul class="list-group list-group-flush">
                             {% for account in equity_accounts %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ account.account_name }}
+                                {{ account.display_name }}
                                 <span class="badge bg-primary rounded-pill">{{ account.balance|floatformat:2 }}</span>
                             </li>
                             {% empty %}
