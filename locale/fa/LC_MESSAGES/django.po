@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-10 15:16+0000\n"
+"POT-Creation-Date: 2025-07-12 19:22+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,310 +18,330 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: core/models.py:53
+#: .\core\admin.py:18
+#, fuzzy
+#| msgid "Persian"
+msgid "Personal info"
+msgstr "فارسی"
+
+#: .\core\admin.py:19
+msgid "Permissions"
+msgstr ""
+
+#: .\core\admin.py:20
+msgid "Important dates"
+msgstr ""
+
+#: .\core\admin.py:21
+msgid "Role"
+msgstr ""
+
+#: .\core\models.py:93
 msgid "Persian Account Name"
 msgstr "نام فارسی حساب"
 
-#: financial_system/settings.py:131
+#: .\financial_system\settings.py:132
 msgid "English"
 msgstr "انگلیسی"
 
-#: financial_system/settings.py:132
+#: .\financial_system\settings.py:133
 msgid "Persian"
 msgstr "فارسی"
 
-#: templates/add_trade.html:4
+#: .\templates\add_trade.html:4
 msgid "Add Trade"
 msgstr "افزودن معامله"
 
-#: templates/add_trade.html:11
+#: .\templates\add_trade.html:11
 msgid "Add New Trade"
 msgstr "افزودن معامله جدید"
 
-#: templates/add_trade.html:18 templates/direct_add_trade.html:126
+#: .\templates\add_trade.html:18 .\templates\direct_add_trade.html:126
 msgid "Save Trade"
 msgstr "ذخیره معامله"
 
-#: templates/balance_sheet.html:4 templates/balance_sheet.html:10
-#: templates/base.html:66
+#: .\templates\balance_sheet.html:4 .\templates\balance_sheet.html:10
+#: .\templates\base.html:66
 msgid "Balance Sheet"
 msgstr "ترازنامه"
 
-#: templates/balance_sheet.html:16
+#: .\templates\balance_sheet.html:16
 msgid "Select Trading Account"
 msgstr "انتخاب حساب معاملاتی"
 
-#: templates/balance_sheet.html:27
+#: .\templates\balance_sheet.html:27
 msgid "Generate Report"
 msgstr "تولید گزارش"
 
-#: templates/balance_sheet.html:34
+#: .\templates\balance_sheet.html:34
 msgid "Balance Sheet for"
 msgstr "ترازنامه برای"
 
-#: templates/balance_sheet.html:34
+#: .\templates\balance_sheet.html:34
 msgid "as of"
 msgstr "تا تاریخ"
 
-#: templates/balance_sheet.html:40 templates/base.html:76
+#: .\templates\balance_sheet.html:40 .\templates\base.html:76
 msgid "Assets"
 msgstr "دارایی ها"
 
-#: templates/balance_sheet.html:48
+#: .\templates\balance_sheet.html:48
 msgid "No asset accounts found."
 msgstr "هیچ حساب دارایی یافت نشد."
 
-#: templates/balance_sheet.html:52
+#: .\templates\balance_sheet.html:52
 msgid "Total Assets"
 msgstr "مجموع دارایی ها"
 
-#: templates/balance_sheet.html:61
+#: .\templates\balance_sheet.html:61
 msgid "Liabilities"
 msgstr "بدهی ها"
 
-#: templates/balance_sheet.html:69
+#: .\templates\balance_sheet.html:69
 msgid "No liability accounts found."
 msgstr "هیچ حساب بدهی یافت نشد."
 
-#: templates/balance_sheet.html:73
+#: .\templates\balance_sheet.html:73
 msgid "Total Liabilities"
 msgstr "مجموع بدهی ها"
 
-#: templates/balance_sheet.html:79
+#: .\templates\balance_sheet.html:79
 msgid "Equity"
 msgstr "حقوق صاحبان سهام"
 
-#: templates/balance_sheet.html:87
+#: .\templates\balance_sheet.html:87
 msgid "No equity accounts found."
 msgstr "هیچ حساب حقوق صاحبان سهام یافت نشد."
 
-#: templates/balance_sheet.html:91
+#: .\templates\balance_sheet.html:91
 msgid "Total Equity"
 msgstr "مجموع حقوق صاحبان سهام"
 
-#: templates/balance_sheet.html:98
+#: .\templates\balance_sheet.html:98
 msgid "Total Liabilities & Equity"
 msgstr "مجموع بدهی ها و حقوق صاحبان سهام"
 
-#: templates/base.html:9 templates/base.html:23
+#: .\templates\base.html:9 .\templates\base.html:23
 msgid "Financial System"
 msgstr "سیستم مالی"
 
-#: templates/base.html:30 templates/index.html:4
+#: .\templates\base.html:30 .\templates\index.html:4
 msgid "Dashboard"
 msgstr "داشبورد"
 
-#: templates/base.html:34
+#: .\templates\base.html:34
 msgid "Accounts"
 msgstr "حساب ها"
 
-#: templates/base.html:37 templates/create_trading_account.html:4
+#: .\templates\base.html:37 .\templates\create_trading_account.html:4
 msgid "Create Trading Account"
 msgstr "ایجاد حساب معاملاتی"
 
-#: templates/base.html:38 templates/funds.html:4
+#: .\templates\base.html:38 .\templates\funds.html:4
 msgid "Fund Management"
 msgstr "مدیریت وجوه"
 
-#: templates/base.html:39
+#: .\templates\base.html:39
 msgid "Spot assets list"
 msgstr "لیست دارایی های اسپات"
 
-#: templates/base.html:44
+#: .\templates\base.html:44
 msgid "Trading"
 msgstr "معامله"
 
-#: templates/base.html:47
+#: .\templates\base.html:47
 msgid "Spot"
 msgstr "اسپات"
 
-#: templates/base.html:48
+#: .\templates\base.html:48
 msgid "Trade"
 msgstr "معامله"
 
-#: templates/base.html:50
+#: .\templates\base.html:50
 msgid "Futures"
 msgstr "آتی"
 
-#: templates/base.html:51
+#: .\templates\base.html:51
 msgid "Open Trade"
 msgstr "باز کردن معامله"
 
-#: templates/base.html:52 templates/open_trades_list.html:4
-#: templates/open_trades_list.html:8
+#: .\templates\base.html:52 .\templates\open_trades_list.html:4
+#: .\templates\open_trades_list.html:8
 msgid "Open Trades List"
 msgstr "لیست معاملات باز"
 
-#: templates/base.html:53
+#: .\templates\base.html:53
 msgid "Record Trade"
 msgstr "ثبت معامله"
 
-#: templates/base.html:54
+#: .\templates\base.html:54
 msgid "History"
 msgstr "تاریخچه"
 
-#: templates/base.html:59
+#: .\templates\base.html:59
 msgid "Reports"
 msgstr "گزارش ها"
 
-#: templates/base.html:62
+#: .\templates\base.html:62
 msgid "View Chart of Accounts"
 msgstr "مشاهده سرفصل حساب ها"
 
-#: templates/base.html:63
+#: .\templates\base.html:63
 msgid "Manage Chart of Accounts"
 msgstr "مدیریت سرفصل حساب ها"
 
-#: templates/base.html:64
+#: .\templates\base.html:64
 msgid "Income Statement"
 msgstr "صورت سود و زیان"
 
-#: templates/base.html:65 templates/trial_balance.html:4
-#: templates/trial_balance.html:8
+#: .\templates\base.html:65 .\templates\trial_balance.html:4
+#: .\templates\trial_balance.html:8
 msgid "Trial Balance"
 msgstr "تراز آزمایشی"
 
-#: templates/base.html:71
+#: .\templates\base.html:71
 msgid "Tools"
 msgstr "ابزارها"
 
-#: templates/base.html:74 templates/unrealized_pnl.html:11
+#: .\templates\base.html:74 .\templates\unrealized_pnl.html:11
 msgid "Calculate Unrealized PnL"
 msgstr "محاسبه سود و زیان تحقق نیافته"
 
-#: templates/base.html:75
+#: .\templates\base.html:75
 msgid "Currencies"
 msgstr "ارزها"
 
-#: templates/base.html:83
+#: .\templates\base.html:83
 msgid "Language"
 msgstr "زبان"
 
-#: templates/base.html:100
+#: .\templates\base.html:100
 msgid "Welcome,"
 msgstr "خوش آمدید،"
 
-#: templates/base.html:103
+#: .\templates\base.html:103
 msgid "Logout"
 msgstr "خروج"
 
-#: templates/base.html:108 templates/login.html:4 templates/login.html:11
-#: templates/login.html:24
+#: .\templates\base.html:108 .\templates\login.html:4 .\templates\login.html:11
+#: .\templates\login.html:24
 msgid "Login"
 msgstr "ورود"
 
-#: templates/chart_of_accounts.html:4 templates/chart_of_accounts.html:8
+#: .\templates\chart_of_accounts.html:4 .\templates\chart_of_accounts.html:8
 msgid "Chart of Accounts"
 msgstr "سرفصل حساب ها"
 
-#: templates/chart_of_accounts.html:14 templates/trial_balance.html:14
+#: .\templates\chart_of_accounts.html:14 .\templates\trial_balance.html:14
 msgid "Select a Trading Account"
 msgstr "یک حساب معاملاتی انتخاب کنید"
 
-#: templates/chart_of_accounts.html:26
+#: .\templates\chart_of_accounts.html:26
 msgid "Chart of Accounts for"
 msgstr "سرفصل حساب ها برای"
 
-#: templates/chart_of_accounts.html:33
+#: .\templates\chart_of_accounts.html:33
 msgid "Account Number"
 msgstr "شماره حساب"
 
-#: templates/chart_of_accounts.html:34
+#: .\templates\chart_of_accounts.html:34
 msgid "Account Name"
 msgstr "نام حساب"
 
-#: templates/chart_of_accounts.html:35
+#: .\templates\chart_of_accounts.html:35
 msgid "Account Type"
 msgstr "نوع حساب"
 
-#: templates/chart_of_accounts.html:36
+#: .\templates\chart_of_accounts.html:36
 msgid "Parent Account"
 msgstr "حساب والد"
 
-#: templates/chart_of_accounts.html:37
+#: .\templates\chart_of_accounts.html:37
 msgid "Is Active"
 msgstr "فعال است"
 
-#: templates/chart_of_accounts.html:62
+#: .\templates\chart_of_accounts.html:62
 msgid "Please select a trading account to view the chart of accounts."
 msgstr "لطفاً برای مشاهده سرفصل حساب ها، یک حساب معاملاتی انتخاب کنید."
 
-#: templates/close_trade.html:4 templates/close_trade.html:8
-#: templates/open_trades_list.html:49
+#: .\templates\close_trade.html:4 .\templates\close_trade.html:8
+#: .\templates\open_trades_list.html:49
 msgid "Close Trade"
 msgstr "بستن معامله"
 
-#: templates/close_trade.html:13
+#: .\templates\close_trade.html:13
 msgid "Open Trade Details"
 msgstr "جزئیات معامله باز"
 
-#: templates/close_trade.html:16 templates/history.html:95
-#: templates/open_trades_list.html:22 templates/trade.html:43
-#: templates/trade.html:78 templates/trade.html:113 templates/trade.html:148
+#: .\templates\close_trade.html:16 .\templates\history.html:95
+#: .\templates\open_trades_list.html:22 .\templates\trade.html:43
+#: .\templates\trade.html:78 .\templates\trade.html:113
+#: .\templates\trade.html:148
 msgid "Asset"
 msgstr "دارایی"
 
-#: templates/close_trade.html:17 templates/open_trades_list.html:23
+#: .\templates\close_trade.html:17 .\templates\open_trades_list.html:23
 msgid "Position Side"
 msgstr "نوع پوزیشن"
 
-#: templates/close_trade.html:18 templates/history.html:97
-#: templates/open_trades_list.html:24 templates/spot_asset_list.html:33
-#: templates/trade.html:51 templates/trade.html:86 templates/trade.html:121
-#: templates/trade.html:156
+#: .\templates\close_trade.html:18 .\templates\history.html:97
+#: .\templates\open_trades_list.html:24 .\templates\spot_asset_list.html:33
+#: .\templates\trade.html:51 .\templates\trade.html:86
+#: .\templates\trade.html:121 .\templates\trade.html:156
 msgid "Quantity"
 msgstr "مقدار"
 
-#: templates/close_trade.html:19 templates/history.html:98
-#: templates/open_trades_list.html:25
+#: .\templates\close_trade.html:19 .\templates\history.html:98
+#: .\templates\open_trades_list.html:25
 msgid "Entry Price"
 msgstr "قیمت ورود"
 
-#: templates/close_trade.html:26
+#: .\templates\close_trade.html:26
 msgid "Confirm and Close Trade"
 msgstr "تایید و بستن معامله"
 
-#: templates/close_trade.html:27 templates/create_trading_account.html:19
-#: templates/delete_trading_account.html:16 templates/direct_add_trade.html:124
-#: templates/history.html:159 templates/history.html:180
+#: .\templates\close_trade.html:27 .\templates\create_trading_account.html:19
+#: .\templates\delete_trading_account.html:16
+#: .\templates\direct_add_trade.html:124 .\templates\history.html:159
+#: .\templates\history.html:180
 msgid "Cancel"
 msgstr "انصراف"
 
-#: templates/create_trading_account.html:11
+#: .\templates\create_trading_account.html:11
 msgid "Create New Trading Account"
 msgstr "ایجاد حساب معاملاتی جدید"
 
-#: templates/create_trading_account.html:18
+#: .\templates\create_trading_account.html:18
 msgid "Create Account"
 msgstr "ایجاد حساب"
 
-#: templates/delete_trading_account.html:4
-#: templates/delete_trading_account.html:8
+#: .\templates\delete_trading_account.html:4
+#: .\templates\delete_trading_account.html:8
 msgid "Delete Trading Account"
 msgstr "حذف حساب معاملاتی"
 
-#: templates/delete_trading_account.html:10
+#: .\templates\delete_trading_account.html:10
 #, python-format
 msgid ""
 "Are you sure you want to delete the trading account "
 "\"%(trading_account.name)s\"?"
 msgstr "آیا از حذف حساب معاملاتی \"%(trading_account.name)s\" مطمئن هستید؟"
 
-#: templates/delete_trading_account.html:11
+#: .\templates\delete_trading_account.html:11
 msgid "This action cannot be undone."
 msgstr "این عمل قابل بازگشت نیست."
 
-#: templates/delete_trading_account.html:15 templates/history.html:48
-#: templates/history.html:128 templates/history.html:162
-#: templates/history.html:183 templates/index.html:38
+#: .\templates\delete_trading_account.html:15 .\templates\history.html:48
+#: .\templates\history.html:128 .\templates\history.html:162
+#: .\templates\history.html:183 .\templates\index.html:38
 msgid "Delete"
 msgstr "حذف"
 
-#: templates/direct_add_trade.html:4 templates/direct_add_trade.html:10
+#: .\templates\direct_add_trade.html:4 .\templates\direct_add_trade.html:10
 msgid "Record Closed Trade"
 msgstr "ثبت معامله بسته شده"
 
-#: templates/direct_add_trade.html:13
+#: .\templates\direct_add_trade.html:13
 msgid ""
 "Use this form to record trades that have already been closed on another "
 "platform."
@@ -329,365 +349,369 @@ msgstr ""
 "از این فرم برای ثبت معاملاتی که قبلاً در پلتفرم دیگری بسته شده‌اند، استفاده "
 "کنید."
 
-#: templates/direct_add_trade.html:69
+#: .\templates\direct_add_trade.html:69
 msgid "Price and P/L Details"
 msgstr "جزئیات قیمت و سود/زیان"
 
-#: templates/direct_add_trade.html:96
+#: .\templates\direct_add_trade.html:96
 msgid "Commission Details"
 msgstr "جزئیات کمیسیون"
 
-#: templates/funds.html:13 templates/funds.html:46 templates/index.html:14
+#: .\templates\funds.html:13 .\templates\funds.html:46
+#: .\templates\index.html:14
 msgid "Deposit"
 msgstr "واریز"
 
-#: templates/funds.html:16 templates/funds.html:70 templates/index.html:15
+#: .\templates\funds.html:16 .\templates\funds.html:70
+#: .\templates\index.html:15
 msgid "Withdraw"
 msgstr "برداشت"
 
-#: templates/funds.html:19 templates/funds.html:98
-#: templates/transfer_funds.html:33
+#: .\templates\funds.html:19 .\templates\funds.html:98
+#: .\templates\transfer_funds.html:33
 msgid "Transfer"
 msgstr "انتقال"
 
-#: templates/funds.html:27
+#: .\templates\funds.html:27
 msgid "Deposit Funds"
 msgstr "واریز وجه"
 
-#: templates/funds.html:31 templates/funds.html:55 templates/history.html:103
-#: templates/open_trades_list.html:21 templates/spot_asset_list.html:32
-#: templates/trade.html:35 templates/trade.html:70 templates/trade.html:105
-#: templates/trade.html:140
+#: .\templates\funds.html:31 .\templates\funds.html:55
+#: .\templates\history.html:103 .\templates\open_trades_list.html:21
+#: .\templates\spot_asset_list.html:32 .\templates\trade.html:35
+#: .\templates\trade.html:70 .\templates\trade.html:105
+#: .\templates\trade.html:140
 msgid "Trading Account"
 msgstr "حساب معاملاتی"
 
-#: templates/funds.html:39 templates/funds.html:63 templates/funds.html:95
-#: templates/transfer_funds.html:30
+#: .\templates\funds.html:39 .\templates\funds.html:63
+#: .\templates\funds.html:95 .\templates\transfer_funds.html:30
 msgid "Amount"
 msgstr "مبلغ"
 
-#: templates/funds.html:43 templates/funds.html:67 templates/history.html:29
-#: templates/trade.html:59 templates/trade.html:94 templates/trade.html:129
-#: templates/trade.html:164 templates/trial_balance.html:67
+#: .\templates\funds.html:43 .\templates\funds.html:67
+#: .\templates\history.html:29 .\templates\trade.html:59
+#: .\templates\trade.html:94 .\templates\trade.html:129
+#: .\templates\trade.html:164 .\templates\trial_balance.html:67
 msgid "Description"
 msgstr "توضیحات"
 
-#: templates/funds.html:51
+#: .\templates\funds.html:51
 msgid "Withdraw Funds"
 msgstr "برداشت وجه"
 
-#: templates/funds.html:75 templates/index.html:17
-#: templates/transfer_funds.html:4 templates/transfer_funds.html:8
+#: .\templates\funds.html:75 .\templates\index.html:17
+#: .\templates\transfer_funds.html:4 .\templates\transfer_funds.html:8
 msgid "Transfer Funds"
 msgstr "انتقال وجه"
 
-#: templates/funds.html:79
+#: .\templates\funds.html:79
 msgid "From Account"
 msgstr "از حساب"
 
-#: templates/funds.html:87
+#: .\templates\funds.html:87
 msgid "To Account"
 msgstr "به حساب"
 
-#: templates/history.html:4 templates/history.html:8
+#: .\templates\history.html:4 .\templates\history.html:8
 msgid "Transaction History"
 msgstr "تاریخچه تراکنش ها"
 
-#: templates/history.html:13
+#: .\templates\history.html:13
 msgid "Journal Entries"
 msgstr "ثبت های روزنامه"
 
-#: templates/history.html:16
+#: .\templates\history.html:16
 msgid "Trades"
 msgstr "معاملات"
 
-#: templates/history.html:28 templates/trial_balance.html:66
+#: .\templates\history.html:28 .\templates\trial_balance.html:66
 msgid "Date"
 msgstr "تاریخ"
 
-#: templates/history.html:30
+#: .\templates\history.html:30
 msgid "Posted By"
 msgstr "ثبت شده توسط"
 
-#: templates/history.html:31
+#: .\templates\history.html:31
 msgid "Details"
 msgstr "جزئیات"
 
-#: templates/history.html:32 templates/history.html:104
-#: templates/open_trades_list.html:27
+#: .\templates\history.html:32 .\templates\history.html:104
+#: .\templates\open_trades_list.html:27
 msgid "Actions"
 msgstr "عملیات"
 
-#: templates/history.html:43
+#: .\templates\history.html:43
 msgid "View Lines"
 msgstr "مشاهده خطوط"
 
-#: templates/history.html:59 templates/trial_balance.html:33
+#: .\templates\history.html:59 .\templates\trial_balance.html:33
 msgid "Account"
 msgstr "حساب"
 
-#: templates/history.html:60 templates/index.html:68
-#: templates/trial_balance.html:34 templates/trial_balance.html:68
+#: .\templates\history.html:60 .\templates\index.html:68
+#: .\templates\trial_balance.html:34 .\templates\trial_balance.html:68
 msgid "Debit"
 msgstr "بدهکار"
 
-#: templates/history.html:61 templates/index.html:70
-#: templates/trial_balance.html:35 templates/trial_balance.html:69
+#: .\templates\history.html:61 .\templates\index.html:70
+#: .\templates\trial_balance.html:35 .\templates\trial_balance.html:69
 msgid "Credit"
 msgstr "بستانکار"
 
-#: templates/history.html:84
+#: .\templates\history.html:84
 msgid "No journal entries found."
 msgstr "هیچ ثبت روزنامه ای یافت نشد."
 
-#: templates/history.html:94 templates/open_trades_list.html:26
+#: .\templates\history.html:94 .\templates\open_trades_list.html:26
 msgid "Entry Date"
 msgstr "تاریخ ورود"
 
-#: templates/history.html:96
+#: .\templates\history.html:96
 msgid "Side"
 msgstr "سمت"
 
-#: templates/history.html:99
+#: .\templates\history.html:99
 msgid "Exit Date"
 msgstr "تاریخ خروج"
 
-#: templates/history.html:100
+#: .\templates\history.html:100
 msgid "Exit Price"
 msgstr "قیمت خروج"
 
-#: templates/history.html:101
+#: .\templates\history.html:101
 msgid "Status"
 msgstr "وضعیت"
 
-#: templates/history.html:102
+#: .\templates\history.html:102
 msgid "P/L"
 msgstr "سود/زیان"
 
-#: templates/history.html:119
+#: .\templates\history.html:119
 msgid "Open"
 msgstr "باز"
 
-#: templates/history.html:121
+#: .\templates\history.html:121
 msgid "Closed"
 msgstr "بسته"
 
-#: templates/history.html:138
+#: .\templates\history.html:138
 msgid "No trades found."
 msgstr "هیچ معامله ای یافت نشد."
 
-#: templates/history.html:152 templates/history.html:173
+#: .\templates\history.html:152 .\templates\history.html:173
 msgid "Confirm Deletion"
 msgstr "تایید حذف"
 
-#: templates/history.html:156
+#: .\templates\history.html:156
 msgid ""
 "Are you sure you want to delete this journal entry? This action cannot be "
 "undone."
 msgstr "آیا از حذف این ثبت روزنامه مطمئن هستید؟ این عمل قابل بازگشت نیست."
 
-#: templates/history.html:177
+#: .\templates\history.html:177
 msgid ""
 "Are you sure you want to delete this trade? This action cannot be undone."
 msgstr "آیا از حذف این معامله مطمئن هستید؟ این عمل قابل بازگشت نیست."
 
-#: templates/index.html:12
+#: .\templates\index.html:12
 msgid "Quick Actions"
 msgstr "اقدامات سریع"
 
-#: templates/index.html:13
+#: .\templates\index.html:13
 msgid "Perform common actions quickly."
 msgstr "انجام سریع اقدامات متداول."
 
-#: templates/index.html:16
+#: .\templates\index.html:16
 msgid "New Trade"
 msgstr "معامله جدید"
 
-#: templates/index.html:27
+#: .\templates\index.html:27
 msgid "Trading Account Summary"
 msgstr "خلاصه حساب معاملاتی"
 
-#: templates/index.html:44
+#: .\templates\index.html:44
 msgid "No trading accounts found."
 msgstr "هیچ حساب معاملاتی یافت نشد."
 
-#: templates/index.html:45
+#: .\templates\index.html:45
 msgid "Create One Now"
 msgstr "یکی ایجاد کنید"
 
-#: templates/index.html:54
+#: .\templates\index.html:54
 msgid "Recent Activity"
 msgstr "فعالیت اخیر"
 
-#: templates/index.html:77
+#: .\templates\index.html:77
 msgid "View all transactions"
 msgstr "مشاهده تمام تراکنش ها"
 
-#: templates/index.html:80
+#: .\templates\index.html:80
 msgid "No recent transactions found."
 msgstr "هیچ تراکنش اخیری یافت نشد."
 
-#: templates/login.html:17
+#: .\templates\login.html:17
 msgid "Username"
 msgstr "نام کاربری"
 
-#: templates/login.html:21
+#: .\templates\login.html:21
 msgid "Password"
 msgstr "رمز عبور"
 
-#: templates/open_trades_list.html:13
+#: .\templates\open_trades_list.html:13
 msgid "There are currently no open trades."
 msgstr "در حال حاضر هیچ معامله بازی وجود ندارد."
 
-#: templates/open_trades_list.html:20
+#: .\templates\open_trades_list.html:20
 msgid "ID"
 msgstr "شناسه"
 
-#: templates/open_trades_list.html:38
+#: .\templates\open_trades_list.html:38
 msgid "Long"
 msgstr "خرید"
 
-#: templates/open_trades_list.html:40
+#: .\templates\open_trades_list.html:40
 msgid "Short"
 msgstr "فروش"
 
-#: templates/open_trades_list.html:60
+#: .\templates\open_trades_list.html:60
 msgid "Open New Trade"
 msgstr "باز کردن معامله جدید"
 
-#: templates/spot_asset_list.html:4 templates/spot_asset_list.html:8
+#: .\templates\spot_asset_list.html:4 .\templates\spot_asset_list.html:8
 msgid "Spot Assets"
 msgstr "دارایی های اسپات"
 
-#: templates/spot_asset_list.html:19
+#: .\templates\spot_asset_list.html:19
 msgid "Total Quantity"
 msgstr "مقدار کل"
 
-#: templates/spot_asset_list.html:22
+#: .\templates\spot_asset_list.html:22
 msgid "Average Purchase Price"
 msgstr "میانگین قیمت خرید"
 
-#: templates/spot_asset_list.html:26
+#: .\templates\spot_asset_list.html:26
 msgid "Lots"
 msgstr "لات ها"
 
-#: templates/spot_asset_list.html:31
+#: .\templates\spot_asset_list.html:31
 msgid "Purchase Date"
 msgstr "تاریخ خرید"
 
-#: templates/spot_asset_list.html:34
+#: .\templates\spot_asset_list.html:34
 msgid "Purchase Price"
 msgstr "قیمت خرید"
 
-#: templates/spot_asset_list.html:54
+#: .\templates\spot_asset_list.html:54
 msgid "No spot assets found."
 msgstr "هیچ دارایی اسپات یافت نشد."
 
-#: templates/trade.html:4 templates/trade.html:11
+#: .\templates\trade.html:4 .\templates\trade.html:11
 msgid "Trade Assets"
 msgstr "معامله دارایی ها"
 
-#: templates/trade.html:16
+#: .\templates\trade.html:16
 msgid "Buy"
 msgstr "خرید"
 
-#: templates/trade.html:19
+#: .\templates\trade.html:19
 msgid "Sell"
 msgstr "فروش"
 
-#: templates/trade.html:22
+#: .\templates\trade.html:22
 msgid "Deposit Spot"
 msgstr "واریز اسپات"
 
-#: templates/trade.html:25
+#: .\templates\trade.html:25
 msgid "Withdraw Spot"
 msgstr "برداشت اسپات"
 
-#: templates/trade.html:31
+#: .\templates\trade.html:31
 msgid "Deposit Spot Asset"
 msgstr "واریز دارایی اسپات"
 
-#: templates/trade.html:55 templates/trade.html:90
+#: .\templates\trade.html:55 .\templates\trade.html:90
 msgid "Price per Unit (USD)"
 msgstr "قیمت هر واحد (دلار)"
 
-#: templates/trade.html:62
+#: .\templates\trade.html:62
 msgid "Deposit Asset"
 msgstr "واریز دارایی"
 
-#: templates/trade.html:66
+#: .\templates\trade.html:66
 msgid "Withdraw Spot Asset"
 msgstr "برداشت دارایی اسپات"
 
-#: templates/trade.html:97
+#: .\templates\trade.html:97
 msgid "Withdraw Asset"
 msgstr "برداشت دارایی"
 
-#: templates/trade.html:101
+#: .\templates\trade.html:101
 msgid "Buy Asset"
 msgstr "خرید دارایی"
 
-#: templates/trade.html:125
+#: .\templates\trade.html:125
 msgid "Total Cost (USD)"
 msgstr "هزینه کل (دلار)"
 
-#: templates/trade.html:132
+#: .\templates\trade.html:132
 msgid "Execute Buy"
 msgstr "اجرای خرید"
 
-#: templates/trade.html:136
+#: .\templates\trade.html:136
 msgid "Sell Asset"
 msgstr "فروش دارایی"
 
-#: templates/trade.html:160
+#: .\templates\trade.html:160
 msgid "Total Revenue (USD)"
 msgstr "درآمد کل (دلار)"
 
-#: templates/trade.html:167
+#: .\templates\trade.html:167
 msgid "Execute Sell"
 msgstr "اجرای فروش"
 
-#: templates/transfer_funds.html:14
+#: .\templates\transfer_funds.html:14
 msgid "From Trading Account"
 msgstr "از حساب معاملاتی"
 
-#: templates/transfer_funds.html:22
+#: .\templates\transfer_funds.html:22
 msgid "To Trading Account"
 msgstr "به حساب معاملاتی"
 
-#: templates/trial_balance.html:26
+#: .\templates\trial_balance.html:26
 msgid "Trial Balance for"
 msgstr "تراز آزمایشی برای"
 
-#: templates/trial_balance.html:36
+#: .\templates\trial_balance.html:36
 msgid "Balance"
 msgstr "تراز"
 
-#: templates/trial_balance.html:49
+#: .\templates\trial_balance.html:49
 msgid "Please select a trading account to view the trial balance."
 msgstr "لطفاً برای مشاهده تراز آزمایشی، یک حساب معاملاتی انتخاب کنید."
 
-#: templates/trial_balance.html:58
+#: .\templates\trial_balance.html:58
 msgid "Transactions for Account"
 msgstr "تراکنش های حساب"
 
-#: templates/unrealized_pnl.html:4
+#: .\templates\unrealized_pnl.html:4
 msgid "Unrealized PnL Calculation"
 msgstr ""
 
-#: templates/unrealized_pnl.html:14
+#: .\templates\unrealized_pnl.html:14
 msgid ""
 "This function calculates and posts unrealized gains/losses for all your "
 "trading accounts."
 msgstr ""
 
-#: templates/unrealized_pnl.html:15
+#: .\templates\unrealized_pnl.html:15
 msgid ""
 "Note: This is a simplified demonstration. In a real system, this would "
 "involve fetching real-time market prices and more complex calculations."
 msgstr ""
 
-#: templates/unrealized_pnl.html:18
+#: .\templates\unrealized_pnl.html:18
 #, fuzzy
 #| msgid "Calculate Unrealized PnL"
 msgid "Calculate PnL"
