@@ -6,7 +6,7 @@ from django.db.models import Sum
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'full_name', 'role']
+        fields = '__all__'
 
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
