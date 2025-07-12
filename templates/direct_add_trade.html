@@ -13,7 +13,7 @@
             <p class="card-text text-muted">{% trans "Use this form to record trades that have already been closed on another platform." %}</p>
             <hr>
 
-            <form method="post" novalidate>
+            <form method="post" id="direct-trade-form" novalidate>
                 {% csrf_token %}
 
                 {% if form.non_field_errors %}
@@ -93,28 +93,46 @@
                 </div>
 
                 <hr>
-                <h5>{% trans "Commission Details" %}</h5>
-                
-                <div class="row">
-                     <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.broker_commission.label_tag }}
-                            {{ form.broker_commission }}
-                            {% if form.broker_commission.errors %}<div class="invalid-feedback d-block">{{ form.broker_commission.errors|first }}</div>{% endif %}
+                <button id="toggle-optional" type="button" class="btn btn-outline-secondary mb-3" data-show-text="{% trans 'Show Optional Fields' %}" data-hide-text="{% trans 'Hide Optional Fields' %}">{% trans 'Show Optional Fields' %}</button>
+
+                <div id="optional-fields">
+                    <h5>{% trans "Commission Details" %}</h5>
+
+                    <div class="row">
+                         <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.broker_commission.label_tag }}
+                                <div class="input-group">
+                                    {{ form.broker_commission }}
+                                    <span class="input-group-text">
+                                        <input type="checkbox" id="broker_commission_percent" class="form-check-input me-1">
+                                        %
+                                    </span>
+                                </div>
+                                <small class="form-text text-muted">{% trans "Check to treat value as percent of Gross P/L" %}</small>
+                                {% if form.broker_commission.errors %}<div class="invalid-feedback d-block">{{ form.broker_commission.errors|first }}</div>{% endif %}
+                            </div>
                         </div>
-                    </div>
-                     <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.trader_commission.label_tag }}
-                            {{ form.trader_commission }}
-                            {% if form.trader_commission.errors %}<div class="invalid-feedback d-block">{{ form.trader_commission.errors|first }}</div>{% endif %}
+                         <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.trader_commission.label_tag }}
+                                <div class="input-group">
+                                    {{ form.trader_commission }}
+                                    <span class="input-group-text">
+                                        <input type="checkbox" id="trader_commission_percent" class="form-check-input me-1">
+                                        %
+                                    </span>
+                                </div>
+                                <small class="form-text text-muted">{% trans "Check to treat value as percent of Gross P/L" %}</small>
+                                {% if form.trader_commission.errors %}<div class="invalid-feedback d-block">{{ form.trader_commission.errors|first }}</div>{% endif %}
+                            </div>
                         </div>
-                    </div>
-                     <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.commission_recipient.label_tag }}
-                            {{ form.commission_recipient }}
-                            {% if form.commission_recipient.errors %}<div class="invalid-feedback d-block">{{ form.commission_recipient.errors|first }}</div>{% endif %}
+                         <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.commission_recipient.label_tag }}
+                                {{ form.commission_recipient }}
+                                {% if form.commission_recipient.errors %}<div class="invalid-feedback d-block">{{ form.commission_recipient.errors|first }}</div>{% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -11,3 +11,7 @@ body {
 .card {
     margin-bottom: 1.5rem;
 }
+
+#optional-fields {
+    display: none;
+}
