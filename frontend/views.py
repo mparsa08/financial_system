@@ -174,7 +174,7 @@ class OpenTradeView(LoginRequiredMixin, CreateView):
         try:
             data = form.cleaned_data
             
-            # 🚀 فراخوانی سرویس برای باز کردن معامله 🚀
+            # فراخوانی سرویس برای باز کردن معامله
             self.object = open_trade(
                 trading_account=data['trading_account'],
                 asset=data['asset'],
@@ -196,9 +196,25 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-
-        # Get user's trading accounts
-        trading_accounts = TradingAccount.objects.filter(user=user)
+        
+        # Debug: Print user information
+        print(f"Current user: {user.username} (ID: {user.id})")
+        
+        # Get user's trading accounts - Admin and Accountant see all accounts
+        if user.is_staff or user.is_superuser or user.role in ['Admin', 'Accountant']:
+            trading_accounts = TradingAccount.objects.all()
+            print("Admin/Accountant user detected - showing all trading accounts")
+        else:
+            trading_accounts = TradingAccount.objects.filter(user=user)
+            print("Regular user - showing only their accounts")
+        
+        # Debug: Print account count
+        print(f"Found {trading_accounts.count()} trading accounts")
+        
+        # Debug: Print account details
+        for account in trading_accounts:
+            print(f"- Account: {account.name} (ID: {account.id}) - Owner: {account.user.username if hasattr(account.user, 'username') else 'N/A'}")
+        
         context['trading_accounts'] = trading_accounts
 
         # Get ChartOfAccount instances linked to these trading accounts
@@ -477,7 +493,7 @@ class CreateTradingAccountView(LoginRequiredMixin, FormView):
             # داده‌های تمیز شده فرم را استخراج می‌کنیم
             data = form.cleaned_data
             
-            # 🚀 فراخوانی صریح تابع سرویس 🚀
+            # فراخوانی صریح تابع سرویس
             # به جای ذخیره مستقیم مدل، منطق کسب‌وکار را از سرویس صدا می‌زنیم
             create_trading_account(
                 user=self.request.user,
@@ -503,20 +519,33 @@ class ChartOfAccountsView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_authenticated:
-            trading_accounts = TradingAccount.objects.filter(user=self.request.user)
-            context['trading_accounts'] = trading_accounts
-
-            selected_account_id = self.request.GET.get('trading_account_id')
-            if selected_account_id:
-                try:
-                    selected_account = TradingAccount.objects.get(id=selected_account_id, user=self.request.user)
-                    context['selected_account'] = selected_account
-                    context['chart_of_accounts'] = ChartOfAccount.objects.filter(
-                        trading_account=selected_account
-                    ).order_by('account_number')
-                except TradingAccount.DoesNotExist:
-                    messages.error(self.request, 'Selected trading account not found.')
+            # Admin and Accountant users see all trading accounts
+            if self.request.user.is_staff or self.request.user.is_superuser or self.request.user.role in ['Admin', 'Accountant']:
+                trading_accounts = TradingAccount.objects.all()
+                print("Admin/Accountant user detected in ChartOfAccountsView - showing all trading accounts")
+            else:
+                trading_accounts = TradingAccount.objects.filter(user=self.request.user)
+                print("Regular user in ChartOfAccountsView - showing only their accounts")
             
+            context['trading_accounts'] = trading_accounts
+            
+            trading_account_id = self.request.GET.get('trading_account_id')
+            selected_account = None
+            chart_of_accounts = []
+            if trading_account_id:
+                try:
+                    # For admin/accountant users, we need to get the account regardless of owner
+                    if self.request.user.is_staff or self.request.user.is_superuser or self.request.user.role in ['Admin', 'Accountant']:
+                        selected_account = TradingAccount.objects.get(id=trading_account_id)
+                    else:
+                        selected_account = TradingAccount.objects.get(id=trading_account_id, user=self.request.user)
+                    chart_of_accounts = ChartOfAccount.objects.filter(trading_account=selected_account).order_by('account_number')
+                except TradingAccount.DoesNotExist:
+                    print(f"Trading account {trading_account_id} not found or access denied")
+                    pass
+            
+            context['selected_account'] = selected_account
+            context['chart_of_accounts'] = chart_of_accounts
         return context
 
 class IncomeStatementView(TemplateView):

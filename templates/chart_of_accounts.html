@@ -13,7 +13,7 @@
                 <select name="trading_account_id" class="form-select" onchange="this.form.submit()">
                     <option value="">{% trans "Select a Trading Account" %}</option>
                     {% for acc in trading_accounts %}
-                        <option value="{{ acc.id }}" {% if selected_account.id == acc.id %}selected{% endif %}>{{ acc.name }}</option>
+                        <option value="{{ acc.id }}" {% if selected_account and selected_account.id == acc.id %}selected{% endif %}>{{ acc.name }}</option>
                     {% endfor %}
                 </select>
             </div>
