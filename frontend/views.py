@@ -34,9 +34,20 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from datetime import datetime
-from .forms import OpenTradeForm, TradingAccountForm,CloseTradeForm,DirectClosedTradeForm
+from .forms import OpenTradeForm, TradingAccountForm,CloseTradeForm,DirectClosedTradeForm, CustomUserCreationForm
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+
+class RegisterView(CreateView):
+    form_class = CustomUserCreationForm
+    template_name = 'register.html'
+    success_url = reverse_lazy('login')
+
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+        messages.success(self.request, f'Welcome, {user.username}!')
+        return redirect(self.success_url)
 
 
 

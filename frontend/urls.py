@@ -7,10 +7,11 @@ from .views import (
     TransferFundsView, CurrencyListView, CurrencyCreateView, CurrencyUpdateView, 
     CurrencyDeleteView, AssetListView, AssetCreateView, AssetUpdateView, AssetDeleteView,
     ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView, 
-    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView
+    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView, RegisterView
 )
 
 urlpatterns = [
+    path('register/', RegisterView.as_view(), name='register'),
     path('', DashboardView.as_view(), name='dashboard'),
     path('funds/', FundManagementView.as_view(), name='fund_management'),
     path('deposit/', DepositView.as_view(), name='deposit_funds'),
