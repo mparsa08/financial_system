@@ -443,6 +443,50 @@ def make_withdrawal(trading_account, amount, description, user):
         except ChartOfAccount.DoesNotExist:
             raise ValueError(f"Required accounts are not set up for {trading_account.name}.")
 
+
+def record_expense(trading_account, expense_account, amount: Decimal, description: str, user) -> JournalEntry:
+    """Record a company expense and create the corresponding journal entry."""
+    with transaction.atomic():
+        if amount <= 0:
+            raise ValueError("Amount must be a positive number.")
+
+        if expense_account.trading_account != trading_account or expense_account.account_type != EXPENSE:
+            raise ValueError("Invalid expense account for the selected trading account.")
+
+        try:
+            cash_account = ChartOfAccount.objects.get(trading_account=trading_account, account_number='1010')
+
+            current_balance = cash_account.journalentryline_set.aggregate(
+                balance=Sum('debit_amount') - Sum('credit_amount')
+            )['balance'] or Decimal('0.00')
+
+            if current_balance < amount:
+                raise ValueError(
+                    f"Insufficient funds in {trading_account.name}. Available: {current_balance}, Attempted expense: {amount}"
+                )
+
+            entry = JournalEntry.objects.create(
+                entry_date=timezone.now().date(),
+                description=description,
+                posted_by=user,
+            )
+
+            JournalEntryLine.objects.create(
+                journal_entry=entry,
+                account=expense_account,
+                debit_amount=amount,
+            )
+            JournalEntryLine.objects.create(
+                journal_entry=entry,
+                account=cash_account,
+                credit_amount=amount,
+            )
+
+            return entry
+
+        except ChartOfAccount.DoesNotExist:
+            raise ValueError(f"Required accounts are not set up for {trading_account.name}.")
+
 def deposit_spot_asset(trading_account, asset, quantity, price_usd, description, user):
     """
     Handles the deposit of a spot asset into a trading account.

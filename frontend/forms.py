@@ -1,5 +1,5 @@
 from django import forms
-from core.models import Trade, TradingAccount, Asset, User
+from core.models import Trade, TradingAccount, Asset, User, ChartOfAccount, EXPENSE
 from django.contrib.auth.forms import UserCreationForm
 
 class TradingAccountForm(forms.ModelForm):
@@ -50,3 +50,17 @@ class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
         fields = UserCreationForm.Meta.fields + ('email', 'role',)
+
+
+class ExpenseForm(forms.Form):
+    trading_account = forms.ModelChoiceField(queryset=TradingAccount.objects.none())
+    expense_account = forms.ModelChoiceField(queryset=ChartOfAccount.objects.none())
+    amount = forms.DecimalField(max_digits=10, decimal_places=2)
+    description = forms.CharField(widget=forms.Textarea, required=False)
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['trading_account'].queryset = TradingAccount.objects.filter(user=user)
+            self.fields['expense_account'].queryset = ChartOfAccount.objects.filter(trading_account__user=user, account_type=EXPENSE)

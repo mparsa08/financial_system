@@ -27,14 +27,15 @@ from core.services import (
     execute_spot_sell,
     calculate_unrealized_pnl,
     transfer_funds_between_accounts,
-    record_direct_closed_trade
+    record_direct_closed_trade,
+    record_expense
 )
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from datetime import datetime
-from .forms import OpenTradeForm, TradingAccountForm,CloseTradeForm,DirectClosedTradeForm, CustomUserCreationForm
+from .forms import OpenTradeForm, TradingAccountForm, CloseTradeForm, DirectClosedTradeForm, CustomUserCreationForm, ExpenseForm
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -642,6 +643,32 @@ class TransferFundsView(View):
         
         trading_accounts = TradingAccount.objects.filter(user=request.user)
         return render(request, 'transfer_funds.html', {'trading_accounts': trading_accounts})
+
+class RecordExpenseView(LoginRequiredMixin, FormView):
+    template_name = 'record_expense.html'
+    form_class = ExpenseForm
+    success_url = reverse_lazy('transaction_history')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        try:
+            record_expense(
+                trading_account=data['trading_account'],
+                expense_account=data['expense_account'],
+                amount=data['amount'],
+                description=data['description'] or 'Expense',
+                user=self.request.user,
+            )
+            messages.success(self.request, 'Expense recorded successfully!')
+            return super().form_valid(form)
+        except ValueError as e:
+            messages.error(self.request, f'Failed to record expense: {e}')
+            return self.form_invalid(form)
 
 # --- Currency CRUD Views ---
 
