@@ -6,8 +6,9 @@ from .views import (
     IncomeStatementView, DeleteTradingAccountView, CalculateUnrealizedPnLView, 
     TransferFundsView, CurrencyListView, CurrencyCreateView, CurrencyUpdateView, 
     CurrencyDeleteView, AssetListView, AssetCreateView, AssetUpdateView, AssetDeleteView,
-    ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView, 
-    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView
+    ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView,
+    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView,
+    UserListView, UserCreateView, UserDeleteView
 )
 
 urlpatterns = [
@@ -37,6 +38,9 @@ urlpatterns = [
     path('assets/add/', AssetCreateView.as_view(), name='asset_add'),
     path('assets/<int:pk>/edit/', AssetUpdateView.as_view(), name='asset_edit'),
     path('assets/<int:pk>/delete/', AssetDeleteView.as_view(), name='asset_delete'),
+    path('users/', UserListView.as_view(), name='user_list'),
+    path('users/add/', UserCreateView.as_view(), name='user_add'),
+    path('users/<int:pk>/delete/', UserDeleteView.as_view(), name='user_delete'),
     path('chart-of-accounts/list/', ChartOfAccountListView.as_view(), name='chartofaccount_list'),
     path('chart-of-accounts/add/', ChartOfAccountCreateView.as_view(), name='chartofaccount_add'),
     path('chart-of-accounts/<int:pk>/edit/', ChartOfAccountUpdateView.as_view(), name='chartofaccount_edit'),

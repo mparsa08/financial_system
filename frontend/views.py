@@ -31,16 +31,29 @@ from core.services import (
 )
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import HttpResponseRedirect
 from datetime import datetime
-from .forms import OpenTradeForm, TradingAccountForm,CloseTradeForm,DirectClosedTradeForm
+from .forms import (
+    OpenTradeForm,
+    TradingAccountForm,
+    CloseTradeForm,
+    DirectClosedTradeForm,
+    UserForm,
+)
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 
 
 User = get_user_model()
+
+
+class AdminRequiredMixin(UserPassesTestMixin):
+    """Mixin to restrict access to admin users."""
+
+    def test_func(self):
+        return self.request.user.is_authenticated and getattr(self.request.user, "role", "") == "Admin"
 
 
 class DirectClosedTradeView(LoginRequiredMixin, CreateView):
@@ -850,3 +863,22 @@ class SpotAssetListView(LoginRequiredMixin, TemplateView):
 
         context['spot_assets'] = spot_assets
         return context
+
+
+class UserListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
+    model = User
+    template_name = 'user_list.html'
+    context_object_name = 'users'
+
+
+class UserCreateView(LoginRequiredMixin, AdminRequiredMixin, CreateView):
+    model = User
+    form_class = UserForm
+    template_name = 'user_form.html'
+    success_url = reverse_lazy('user_list')
+
+
+class UserDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = User
+    template_name = 'user_confirm_delete.html'
+    success_url = reverse_lazy('user_list')
