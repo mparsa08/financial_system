@@ -41,9 +41,9 @@
                             {% for account in chart_of_accounts %}
                                 <tr>
                                     <td>{{ account.account_number }}</td>
-                                    <td>{{ account.account_name }}</td>
+                                    <td>{{ account.display_name }}</td>
                                     <td>{{ account.get_account_type_display }}</td>
-                                    <td>{{ account.parent_account.account_name|default:"N/A" }}</td>
+                                    <td>{{ account.parent_account.display_name|default:"N/A" }}</td>
                                     <td>
                                         {% if account.is_active %}
                                             <i class="bi bi-check-circle-fill text-success"></i>

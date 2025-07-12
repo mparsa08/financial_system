@@ -62,7 +62,7 @@
                                         <h6 class="mb-1">{{ line.journal_entry.description|truncatewords:5 }}</h6>
                                         <small>{{ line.journal_entry.entry_date }}</small>
                                     </div>
-                                    <p class="mb-1 text-muted">{{ line.account.account_name }}</p>
+                                    <p class="mb-1 text-muted">{{ line.account.display_name }}</p>
                                     <small class="{% if line.debit_amount > 0 %}text-danger{% else %}text-success{% endif %}">
                                         {% if line.debit_amount > 0 %}
                                             <i class="bi bi-arrow-up-right"></i> {% trans "Debit" %}: {{ line.debit_amount }}

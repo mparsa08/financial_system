@@ -1,5 +1,5 @@
-<tr class="account-row" data-account-name="{{ account.object.account_name }}" data-lines='{{ account.lines_json|escapejs }}'>
-    <td style="padding-left: {{ level|add:1 }}rem;">{{ account.object.account_name }}</td>
+<tr class="account-row" data-account-name="{{ account.object.display_name }}" data-lines='{{ account.lines_json|escapejs }}'>
+    <td style="padding-left: {{ level|add:1 }}rem;">{{ account.object.display_name }}</td>
     <td class="text-end">{{ account.debit|floatformat:2 }}</td>
     <td class="text-end">{{ account.credit|floatformat:2 }}</td>
     <td class="text-end">{{ account.balance|floatformat:2 }}</td>
