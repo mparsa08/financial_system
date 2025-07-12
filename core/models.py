@@ -6,6 +6,46 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _, get_language
 
+# Mapping of common English account names to their Persian equivalents
+FARSI_ACCOUNT_NAME_MAP = {
+    'Assets': 'دارایی‌ها',
+    'Cash': 'نقد',
+    'Spot Assets Holdings': 'دارایی‌های اسپات',
+    'Derivative Contracts': 'قراردادهای مشتقه',
+    'Initial Margin': 'مارجین اولیه',
+    'Maintenance Margin': 'مارجین نگهداری',
+    'Unrealized PnL - Derivatives': 'سود/زیان تحقق‌نیافته - مشتقات',
+    'Liabilities': 'بدهی‌ها',
+    'Equity': 'حقوق صاحبان سهام',
+    'User Capital': 'سرمایه کاربر',
+    'Revenues': 'درآمدها',
+    'Realized PnL - Derivatives': 'سود/زیان تحقق‌یافته - مشتقات',
+    'Commissions & Fees': 'کارمزدها و هزینه‌ها',
+    'Funding Receipts': 'دریافت‌های فاندینگ',
+    'Lending Income': 'درآمد وام‌دهی',
+    'Staking Rewards': 'جوایز استیکینگ',
+    'Expenses': 'هزینه‌ها',
+    'Trading Fees': 'کارمزد معاملات',
+    'Interest Expense': 'هزینه بهره',
+    'Funding Payments': 'پرداخت‌های فاندینگ',
+    'Withdrawal Fees': 'کارمزد برداشت',
+    'Platform Fees': 'هزینه‌های پلتفرم',
+    'Realized Gain on Spot Sale': 'سود حاصل از فروش اسپات',
+    'Realized Loss on Spot Sale': 'ضرر حاصل از فروش اسپات',
+}
+
+
+def translate_account_name_to_farsi(name: str) -> str:
+    """Return a Persian translation for a given English account name."""
+    if name.startswith('Payable to:'):
+        suffix = name[len('Payable to:'):].strip()
+        return f'قابل پرداخت به {suffix}'
+    for eng, fa in FARSI_ACCOUNT_NAME_MAP.items():
+        if name.startswith(eng):
+            suffix = name[len(eng):]
+            return f'{fa}{suffix}'
+    return name
+
 
 
 ASSET = 'Asset'
@@ -72,6 +112,12 @@ class ChartOfAccount(models.Model):
         related_name='gl_accounts',
         help_text="Connects this account to a specific user as a counterparty"
     )
+
+    def save(self, *args, **kwargs):
+        if not self.account_name_fa and self.account_name:
+            self.account_name_fa = translate_account_name_to_farsi(self.account_name)
+        super().save(*args, **kwargs)
+
     @property
     def display_name(self):
         if get_language() == "fa" and self.account_name_fa:
