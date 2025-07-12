@@ -6,8 +6,9 @@ from .views import (
     IncomeStatementView, DeleteTradingAccountView, CalculateUnrealizedPnLView, 
     TransferFundsView, CurrencyListView, CurrencyCreateView, CurrencyUpdateView, 
     CurrencyDeleteView, AssetListView, AssetCreateView, AssetUpdateView, AssetDeleteView,
-    ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView, 
-    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView, RegisterView
+    ChartOfAccountListView, ChartOfAccountCreateView, ChartOfAccountUpdateView,
+    ChartOfAccountDeleteView, BalanceSheetView, FundManagementView,OpenTradesListView,TrialBalanceView, RegisterView,
+    RecordExpenseView
 )
 
 urlpatterns = [
@@ -30,6 +31,7 @@ urlpatterns = [
     path('delete-trading-account/<int:pk>/', DeleteTradingAccountView.as_view(), name='delete_trading_account'),
     path('unrealized-pnl/', CalculateUnrealizedPnLView.as_view(), name='unrealized_pnl_view'),
     path('transfer-funds/', TransferFundsView.as_view(), name='transfer_funds'),
+    path('expenses/add/', RecordExpenseView.as_view(), name='record_expense'),
     path('currencies/', CurrencyListView.as_view(), name='currency_list'),
     path('currencies/add/', CurrencyCreateView.as_view(), name='currency_add'),
     path('currencies/<int:pk>/edit/', CurrencyUpdateView.as_view(), name='currency_edit'),
